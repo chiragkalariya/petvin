@@ -162,7 +162,7 @@ function printCostingRecord(record: SavedRecord) {
   .footer{margin-top:40px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}
   @media print{body{padding:20px}}</style></head>
   <body>
-  <div class="header"><div><div class="company">Shreeji Enterprise<small>Laser Cutting &amp; Fabrication</small></div></div>
+  <div class="header"><div><div class="company">Petvin<small>Laser Cutting &amp; Fabrication</small></div></div>
   <div class="meta"><div><strong>Quote Date:</strong> ${formatDate(record.createdAt)}</div>
   ${record.inquiry ? `<div><strong>Client:</strong> ${record.inquiry.name}${record.inquiry.company ? ` · ${record.inquiry.company}` : ""}</div>` : ""}
   <div><strong>Quote ID:</strong> ${record.id.slice(-8).toUpperCase()}</div></div></div>
@@ -170,7 +170,7 @@ function printCostingRecord(record: SavedRecord) {
   <table><tbody>${rows}
   <tr class="total-row"><td>GRAND TOTAL (incl. GST)</td><td style="text-align:right">${formatCurrency(record.totalCost)}</td></tr>
   </tbody></table>
-  <div class="footer">Computer-generated quotation · Valid 30 days · Shreeji Enterprise</div>
+  <div class="footer">Computer-generated quotation · Valid 30 days · Petvin</div>
   <script>setTimeout(()=>{window.print();window.close()},400)</script></body></html>`);
   win.document.close();
 }
@@ -202,8 +202,8 @@ function ViewModal({ record, onClose, onEdit }: { record: SavedRecord; onClose: 
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-line-soft px-5 py-3">
           {[["Weight", `${record.weightKg} kg`], ["Rate/kg", formatCurrency(record.materialRatePerKg)],
-            ["Cut Length", `${record.cuttingLengthM} m`], ["Bends", String(record.bendCount)],
-            ["Wastage", `${record.wastagePercent}%`], ["Margin", `${record.marginPercent}%`], ["GST", `${record.gstPercent}%`]
+          ["Cut Length", `${record.cuttingLengthM} m`], ["Bends", String(record.bendCount)],
+          ["Wastage", `${record.wastagePercent}%`], ["Margin", `${record.marginPercent}%`], ["GST", `${record.gstPercent}%`]
           ].map(([k, v]) => (
             <div key={k}><p className="font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">{k}</p>
               <p className="text-sm font-medium text-ink">{v}</p></div>
@@ -414,14 +414,14 @@ function AddItemForm({
     if (!cuttingTimeStr || cuttingTimeStr === "00:00") {
       setCuttingTimeStr(computed.cuttingTimeMin > 0 ? formatTime(computed.cuttingTimeMin) : "");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.cuttingLengthM]);
 
   useEffect(() => {
     if (!bendingTimeStr || bendingTimeStr === "00:00") {
       setBendingTimeStr(computed.bendingTimeMin > 0 ? formatTime(computed.bendingTimeMin) : "");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.bendCount]);
 
   function handleAdd() {

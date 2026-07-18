@@ -4,7 +4,7 @@ import { ContactForm } from "@/components/sections/ContactForm";
 import { SITE } from "@/lib/site-content";
 
 export const metadata: Metadata = {
-  title: "Contact Us — Shreeji Enterprise",
+  title: "Contact Us — Petvin",
 };
 
 function InfoBlock({ label, value, href }: { label: string; value: string; href?: string }) {

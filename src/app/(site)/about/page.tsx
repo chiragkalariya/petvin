@@ -3,7 +3,7 @@ import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { SpecPlate, SpecRow } from "@/components/ui/Card";
 
 export const metadata: Metadata = {
-  title: "About Us — Shreeji Enterprise",
+  title: "About Us — Petvin",
 };
 
 export default function AboutPage() {
@@ -17,7 +17,7 @@ export default function AboutPage() {
       <div className="grid gap-14 md:grid-cols-2">
         <div className="space-y-4 text-[15.5px] text-ink-dim">
           <p>
-            Shreeji Enterprise is a sheet metal fabrication shop. We don&apos;t outsource the two
+            Petvin is a sheet metal fabrication shop. We don&apos;t outsource the two
             operations that matter most — cutting and bending happen under one roof, on our own
             equipment, so your drawing goes from file to finished part without changing hands.
           </p>

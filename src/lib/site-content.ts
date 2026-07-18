@@ -1,5 +1,5 @@
 export const SITE = {
-  name: "Shreeji Enterprise",
+  name: "Petvin",
   tagline: "Precision Laser Cutting & CNC Bending",
   phone: "+91 00000 00000",
   email: "info@shreejienterprise.com",

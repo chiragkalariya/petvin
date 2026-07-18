@@ -4,7 +4,7 @@ import { CapabilitiesGrid } from "@/components/sections/CapabilitiesGrid";
 import { IndustriesChips } from "@/components/sections/IndustriesChips";
 
 export const metadata: Metadata = {
-  title: "Capabilities & Products — Shreeji Enterprise",
+  title: "Capabilities & Products — Petvin",
 };
 
 export default function ProductsPage() {

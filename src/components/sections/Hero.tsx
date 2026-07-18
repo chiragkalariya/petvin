@@ -15,7 +15,7 @@ export function Hero() {
             <span className="text-accent">Precisely bent.</span>
           </h1>
           <p className="mt-6 max-w-lg text-[17px] text-ink-dim">
-            Shreeji Enterprise turns raw sheet metal into finished parts — fast, accurate, and built to
+            Petvin turns raw sheet metal into finished parts — fast, accurate, and built to
             your drawing. One shop, from laser cutting through final bend.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
