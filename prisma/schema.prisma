@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
+}
+
+enum VisitStatus {
+  INTERESTED
+  NOT_INTERESTED
+  CONVERTED
+  ON_HOLD
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(EMPLOYEE)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  assignedInquiries Inquiry[]      @relation("AssignedInquiries")
+  visits            CompanyVisit[]
+  costingRecords    CostingRecord[]
+  notes             Note[]
+
+  @@map("users")
+}
+
+model Inquiry {
+  id            String         @id @default(cuid())
+  name          String
+  company       String?
+  phone         String
+  email         String?
+  message       String?
+  fileUrl       String?
+  fileName      String?
+  status        InquiryStatus  @default(NEW)
+
+  assignedTo    User?          @relation("AssignedInquiries", fields: [assignedToId], references: [id])
+  assignedToId  String?
+
+  notes         Note[]
+  costingRecords CostingRecord[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("inquiries")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  content    String
+  inquiry    Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  inquiryId  String
+  author     User?    @relation(fields: [authorId], references: [id])
+  authorId   String?
+  createdAt  DateTime @default(now())
+
+  @@index([inquiryId])
+  @@map("notes")
+}
+
+model CompanyVisit {
+  id             String       @id @default(cuid())
+  companyName    String
+  address        String?
+  contactPerson  String?
+  contactPhone   String?
+  contactEmail   String?
+  visitDate      DateTime
+  purpose        String?
+  requirement    String?
+  notes          String?
+  status         VisitStatus  @default(INTERESTED)
+  followUpDate   DateTime?
+  photoUrl       String?
+
+  employee       User         @relation(fields: [employeeId], references: [id])
+  employeeId     String
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status])
+  @@index([visitDate])
+  @@map("company_visits")
+}
+
+model PortfolioCategory {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  slug      String          @unique
+  items     PortfolioItem[]
+  createdAt DateTime        @default(now())
+
+  @@map("portfolio_categories")
+}
+
+model PortfolioItem {
+  id          String            @id @default(cuid())
+  name        String
+  material    String?
+  description String?
+  imageUrl    String?
+
+  category    PortfolioCategory @relation(fields: [categoryId], references: [id])
+  categoryId  String
+
+  featured    Boolean           @default(false)
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([categoryId])
+  @@map("portfolio_items")
+}
+
+model CostingRecord {
+  id               String   @id @default(cuid())
+  title            String
+
+  materialType     String
+  thicknessMm      Float
+  weightKg         Float    @default(0)
+  materialRatePerKg Float   @default(0)
+
+  cuttingLengthM   Float    @default(0)
+  cuttingRatePerM  Float    @default(0)
+
+  bendCount        Int      @default(0)
+  bendRatePerBend  Float    @default(0)
+
+  wastagePercent   Float    @default(5)
+  marginPercent    Float    @default(15)
+  gstPercent       Float    @default(18)
+
+  materialCost     Float
+  cuttingCost      Float
+  bendingCost      Float
+  wastageCost      Float
+  subtotal         Float
+  marginAmount     Float
+  taxAmount        Float
+  totalCost        Float
+
+  inquiry          Inquiry? @relation(fields: [inquiryId], references: [id])
+  inquiryId        String?
+
+  createdBy        User?    @relation(fields: [createdById], references: [id])
+  createdById      String?
+
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("costing_records")
+}
