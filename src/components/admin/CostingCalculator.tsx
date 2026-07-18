@@ -391,6 +391,9 @@ function SectionHeader({ num, title }: { num: number; title: string }) {
 
 // ─── Add Item Form ────────────────────────────────────────────────────────────
 
+let _pendingCuttingTimeMin = 0;
+let _pendingBendingTimeMin = 0;
+
 function AddItemForm({
   draft,
   onChange,
