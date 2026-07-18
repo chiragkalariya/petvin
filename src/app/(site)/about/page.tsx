@@ -33,12 +33,12 @@ export default function AboutPage() {
           <h4 className="text-sm uppercase tracking-wide text-ink">Equipment on the floor</h4>
           <SpecPlate>
             <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">Cutting</div>
-            <SpecRow k="Fiber Laser" v="190 kW" />
+            <SpecRow k="Fiber Laser" v="3 kW" />
             <SpecRow k="Materials" v="MS / SS / AL / Brass" />
           </SpecPlate>
           <SpecPlate>
             <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">Bending</div>
-            <SpecRow k="Press Brake" v="175 Ton CNC" />
+            <SpecRow k="Press Brake" v="160 Ton CNC" />
             <SpecRow k="Tolerance" v="Tight, repeatable" />
           </SpecPlate>
         </div>

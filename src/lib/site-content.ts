@@ -15,8 +15,8 @@ export const NAV_LINKS = [
 ];
 
 export const MACHINE_SPECS = [
-  { label: "Fiber Laser Cutter", value: "190 kW" },
-  { label: "CNC Press Brake", value: "175 Ton" },
+  { label: "Fiber Laser Cutter", value: "3 kW" },
+  { label: "CNC Press Brake", value: "160 Ton" },
   { label: "Materials", value: "MS / SS / AL" },
   { label: "Turnaround", value: "Prototype → Bulk" },
 ];
@@ -26,13 +26,13 @@ export const CAPABILITIES = [
     num: "01",
     title: "Laser Cutting",
     description:
-      "High-precision cutting on our 190 kW fiber laser — clean edges, tight tolerances, minimal material waste.",
+      "High-precision cutting on our 3 kW fiber laser — clean edges, tight tolerances, minimal material waste.",
   },
   {
     num: "02",
     title: "CNC Bending",
     description:
-      "175-ton press brake for accurate, repeatable bends on brackets, panels, and enclosures of any complexity.",
+      "160-ton press brake for accurate, repeatable bends on brackets, panels, and enclosures of any complexity.",
   },
   {
     num: "03",
