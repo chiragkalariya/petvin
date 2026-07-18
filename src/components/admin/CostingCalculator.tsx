@@ -162,7 +162,7 @@ function printCostingRecord(record: SavedRecord) {
   .footer{margin-top:40px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}
   @media print{body{padding:20px}}</style></head>
   <body>
-  <div class="header"><div><div class="company">Petvin<small>Laser Cutting &amp; Fabrication</small></div></div>
+  <div class="header"><div><div class="company">Petvin Febtech<small>Laser Cutting &amp; Fabrication</small></div></div>
   <div class="meta"><div><strong>Quote Date:</strong> ${formatDate(record.createdAt)}</div>
   ${record.inquiry ? `<div><strong>Client:</strong> ${record.inquiry.name}${record.inquiry.company ? ` · ${record.inquiry.company}` : ""}</div>` : ""}
   <div><strong>Quote ID:</strong> ${record.id.slice(-8).toUpperCase()}</div></div></div>
@@ -170,7 +170,7 @@ function printCostingRecord(record: SavedRecord) {
   <table><tbody>${rows}
   <tr class="total-row"><td>GRAND TOTAL (incl. GST)</td><td style="text-align:right">${formatCurrency(record.totalCost)}</td></tr>
   </tbody></table>
-  <div class="footer">Computer-generated quotation · Valid 30 days · Petvin</div>
+  <div class="footer">Computer-generated quotation · Valid 30 days · Petvin Febtech</div>
   <script>setTimeout(()=>{window.print();window.close()},400)</script></body></html>`);
   win.document.close();
 }

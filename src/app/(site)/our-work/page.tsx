@@ -3,7 +3,7 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { PortfolioGrid } from "@/components/sections/PortfolioGrid";
 
 export const metadata: Metadata = {
-  title: "Our Work — Petvin",
+  title: "Our Work — Petvin Febtech",
 };
 
 export default function OurWorkPage() {

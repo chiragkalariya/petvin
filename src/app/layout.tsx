@@ -8,9 +8,9 @@ const plexSans = IBM_Plex_Sans({ subsets: ["latin"], variable: "--font-plex-sans
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-plex-mono", weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "Petvin — Precision Laser Cutting & CNC Bending",
+  title: "Petvin Febtech — Precision Laser Cutting & CNC Bending",
   description:
-    "Petvin provides precision laser cutting and CNC press brake bending for automotive, furniture, electrical enclosure, and signage industries.",
+    "Petvin Febtech provides precision laser cutting and CNC press brake bending for automotive, furniture, electrical enclosure, and signage industries.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

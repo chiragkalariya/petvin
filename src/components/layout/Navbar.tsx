@@ -6,9 +6,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-line bg-bg">
       <nav className="flex w-full items-center justify-between px-5 py-4 md:px-10">
-        <Link href="/" className="flex items-center gap-2.5 font-display text-lg uppercase tracking-wide text-ink">
-          <span className="h-3 w-3 bg-accent [clip-path:polygon(0_0,100%_0,100%_70%,70%_100%,0_100%)]" />
-          {SITE.name}
+        <Link href="/" className="flex items-center gap-2.5">
+          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Logo" className="w-28 md:w-32 h-auto" />
         </Link>
 
         <div className="hidden items-center gap-10 md:flex">

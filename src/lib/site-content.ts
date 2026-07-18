@@ -1,9 +1,9 @@
 export const SITE = {
-  name: "Petvin",
+  name: "Petvin Febtech",
   tagline: "Precision Laser Cutting & CNC Bending",
-  phone: "+91 00000 00000",
-  email: "info@shreejienterprise.com",
-  address: "Add your workshop address here",
+  phone: "+91 9624889080",
+  email: "petvinfebtech@gmail",
+  address: "239, Vivekanand Industrial Park, Kubadthal Road, opp. Arya Industrial Estate, Kubadthal, Ahmedabad, Gujarat 382433",
   hours: "Mon – Sat, 9:00 AM – 7:00 PM",
 };
 
