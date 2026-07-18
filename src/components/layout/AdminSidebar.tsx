@@ -19,7 +19,7 @@ export function AdminSidebar() {
   const { data: session } = useSession();
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-line bg-bg-alt">
+    <aside className="flex h-[100dvh] md:h-screen w-64 flex-col border-r border-line bg-bg-alt">
       <div className="border-b border-line px-6 py-5">
         <div className="flex items-center gap-2.5 font-display text-base uppercase tracking-wide text-ink">
           <span className="h-3 w-3 bg-accent [clip-path:polygon(0_0,100%_0,100%_70%,70%_100%,0_100%)]" />
