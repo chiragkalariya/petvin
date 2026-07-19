@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/session";
 import { costingRecordSchema } from "@/lib/validations";
 import { calculateCosting } from "@/lib/costing";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     await requireUser();
@@ -90,3 +92,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
+

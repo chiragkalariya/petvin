@@ -38,9 +38,8 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-2.5 font-display text-lg uppercase tracking-wide text-ink">
-          <span className="h-3 w-3 bg-accent [clip-path:polygon(0_0,100%_0,100%_70%,70%_100%,0_100%)]" />
-          {SITE.name}
+        <div className="mb-8 flex justify-center">
+          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Febtech Logo" className="w-40 h-auto" />
         </div>
         <div className="border border-line bg-bg-alt p-8">
           <h1 className="mb-1 font-display text-xl uppercase text-ink">Admin Login</h1>
