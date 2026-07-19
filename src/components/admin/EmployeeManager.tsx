@@ -7,6 +7,7 @@ import { Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card } from "@/components/ui/Card";
 import { formatDate } from "@/lib/utils";
+import { EyeIcon } from "@/components/ui/Icons";
 
 interface Employee {
   id: string;
@@ -101,10 +102,10 @@ export function EmployeeManager() {
                     <Badge tone={emp.active ? "success" : "danger"}>{emp.active ? "Active" : "Disabled"}</Badge>
                   </TD>
                   <TD>{formatDate(emp.createdAt)}</TD>
-                  <TD>
+                  <TD className="text-right">
                     <button
                       onClick={() => toggleActive(emp.id, emp.active)}
-                      className="text-xs uppercase tracking-wide text-ink-dim hover:text-accent"
+                      className="text-xs uppercase tracking-wide text-ink-dim hover:text-accent font-mono"
                     >
                       {emp.active ? "Disable" : "Enable"}
                     </button>

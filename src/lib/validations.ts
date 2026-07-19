@@ -20,6 +20,20 @@ export const noteSchema = z.object({
   content: z.string().min(1, "Note cannot be empty"),
 });
 
+export const prospectCompanySchema = z.object({
+  companyName: z.string().min(2, "Company name is required"),
+  location: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  industry: z.string().optional().or(z.literal("")),
+  contactPerson: z.string().optional().or(z.literal("")),
+  contactPhone: z.string().optional().or(z.literal("")),
+  contactEmail: z.string().email().optional().or(z.literal("")),
+  potentialParts: z.string().optional().or(z.literal("")),
+  priority: z.enum(["HIGH", "MEDIUM", "LOW"]),
+  remarks: z.string().optional().or(z.literal("")),
+});
+export type ProspectCompanyValues = z.infer<typeof prospectCompanySchema>;
+
 export const companyVisitSchema = z.object({
   companyName: z.string().min(2, "Company name is required"),
   address: z.string().optional(),
@@ -33,6 +47,9 @@ export const companyVisitSchema = z.object({
   status: z.enum(["INTERESTED", "NOT_INTERESTED", "CONVERTED", "ON_HOLD"]),
   followUpDate: z.string().optional().or(z.literal("")),
   photoUrl: z.string().url().optional().or(z.literal("")),
+  prospectId: z.string().optional().or(z.literal("")),
+  // For inline new company creation
+  newProspect: prospectCompanySchema.optional(),
 });
 export type CompanyVisitValues = z.infer<typeof companyVisitSchema>;
 

@@ -1,32 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { companyVisitSchema } from "@/lib/validations";
+import { prospectCompanySchema } from "@/lib/validations";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await requireUser();
 
-    const visit = await prisma.companyVisit.findUnique({
+    const prospect = await prisma.prospectCompany.findUnique({
       where: { id: params.id },
       include: {
-        employee: { select: { id: true, name: true } },
-        prospect: { select: { id: true, companyName: true, location: true, industry: true, potentialParts: true } },
+        visits: {
+          include: { employee: { select: { id: true, name: true } } },
+          orderBy: { visitDate: "desc" },
+        },
+        createdBy: { select: { id: true, name: true } },
+        _count: { select: { visits: true } },
       },
     });
 
-    if (!visit) {
-      return NextResponse.json({ error: "Visit not found" }, { status: 404 });
+    if (!prospect) {
+      return NextResponse.json({ error: "Prospect not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ visit });
+    return NextResponse.json({ prospect });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Get visit error:", error);
+    console.error("Get prospect error:", error);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
@@ -36,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await requireUser();
 
     const body = await req.json();
-    const parsed = companyVisitSchema.partial().safeParse(body);
+    const parsed = prospectCompanySchema.partial().safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -47,32 +51,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const data = parsed.data;
 
-    const visit = await prisma.companyVisit.update({
+    const prospect = await prisma.prospectCompany.update({
       where: { id: params.id },
       data: {
         ...(data.companyName !== undefined && { companyName: data.companyName }),
+        ...(data.location !== undefined && { location: data.location || null }),
         ...(data.address !== undefined && { address: data.address || null }),
+        ...(data.industry !== undefined && { industry: data.industry || null }),
         ...(data.contactPerson !== undefined && { contactPerson: data.contactPerson || null }),
         ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone || null }),
         ...(data.contactEmail !== undefined && { contactEmail: data.contactEmail || null }),
-        ...(data.visitDate !== undefined && { visitDate: new Date(data.visitDate) }),
-        ...(data.purpose !== undefined && { purpose: data.purpose || null }),
-        ...(data.requirement !== undefined && { requirement: data.requirement || null }),
-        ...(data.notes !== undefined && { notes: data.notes || null }),
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.followUpDate !== undefined && {
-          followUpDate: data.followUpDate ? new Date(data.followUpDate) : null,
-        }),
-        ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl || null }),
+        ...(data.potentialParts !== undefined && { potentialParts: data.potentialParts || null }),
+        ...(data.priority !== undefined && { priority: data.priority }),
+        ...(data.remarks !== undefined && { remarks: data.remarks || null }),
       },
     });
 
-    return NextResponse.json({ visit });
+    return NextResponse.json({ prospect });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Update visit error:", error);
+    console.error("Update prospect error:", error);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
@@ -80,13 +80,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await requireUser();
-    await prisma.companyVisit.delete({ where: { id: params.id } });
+
+    // Check if prospect has visits
+    const visitCount = await prisma.companyVisit.count({
+      where: { prospectId: params.id },
+    });
+
+    if (visitCount > 0) {
+      // Unlink visits instead of preventing deletion
+      await prisma.companyVisit.updateMany({
+        where: { prospectId: params.id },
+        data: { prospectId: null },
+      });
+    }
+
+    await prisma.prospectCompany.delete({ where: { id: params.id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Delete visit error:", error);
+    console.error("Delete prospect error:", error);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
