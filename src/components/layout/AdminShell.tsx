@@ -39,7 +39,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex h-screen flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-line bg-bg-alt px-5 py-4 md:hidden">
-          <span className="font-display text-sm uppercase tracking-wide text-ink">Shreeji Admin</span>
+          <span className="font-display text-sm uppercase tracking-wide text-ink">Dashboard</span>
           <button
             onClick={() => setOpen(true)}
             className="border border-line px-3 py-1.5 text-xs uppercase tracking-wide text-ink-dim"
