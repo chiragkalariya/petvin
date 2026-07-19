@@ -6,6 +6,7 @@ import { Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Card, Badge, EmptyState } from "@/components/ui/Card";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
+import { TrashIcon } from "@/components/ui/Icons";
 
 interface Category {
   id: string;
@@ -168,9 +169,10 @@ export function PortfolioManager() {
                   </div>
                   <button
                     onClick={() => handleDeleteCategory(cat.id)}
-                    className="text-xs uppercase tracking-wide text-ink-dim hover:text-accent"
+                    className="text-ink-dim hover:text-red-400 transition-colors"
+                    title="Delete Category"
                   >
-                    Delete
+                    <TrashIcon />
                   </button>
                 </li>
               ))}
@@ -224,9 +226,10 @@ export function PortfolioManager() {
                     <TD>
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="text-xs uppercase tracking-wide text-ink-dim hover:text-accent"
+                        className="text-ink-dim hover:text-red-400 transition-colors"
+                        title="Delete Item"
                       >
-                        Delete
+                        <TrashIcon />
                       </button>
                     </TD>
                   </TRow>

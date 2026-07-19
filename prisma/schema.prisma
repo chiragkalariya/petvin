@@ -26,6 +26,20 @@ enum VisitStatus {
   ON_HOLD
 }
 
+enum VisitPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ProspectStatus {
+  TO_VISIT
+  IN_PROGRESS
+  VISITED
+  CONVERTED
+  NOT_INTERESTED
+}
+
 model User {
   id            String         @id @default(cuid())
   name          String
@@ -40,6 +54,7 @@ model User {
   visits            CompanyVisit[]
   costingRecords    CostingRecord[]
   notes             Note[]
+  prospects         ProspectCompany[] @relation("ProspectCreator")
 
   @@map("users")
 }
@@ -82,8 +97,35 @@ model Note {
   @@map("notes")
 }
 
+model ProspectCompany {
+  id              String          @id @default(cuid())
+  companyName     String
+  location        String?
+  address         String?
+  industry        String?
+  contactPerson   String?
+  contactPhone    String?
+  contactEmail    String?
+  potentialParts  String?
+  priority        VisitPriority   @default(MEDIUM)
+  status          ProspectStatus  @default(TO_VISIT)
+  remarks         String?
+
+  visits          CompanyVisit[]
+
+  createdBy       User?           @relation("ProspectCreator", fields: [createdById], references: [id])
+  createdById     String?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@map("prospect_companies")
+}
+
 model CompanyVisit {
-  id             String       @id @default(cuid())
+  id             String            @id @default(cuid())
   companyName    String
   address        String?
   contactPerson  String?
@@ -93,18 +135,22 @@ model CompanyVisit {
   purpose        String?
   requirement    String?
   notes          String?
-  status         VisitStatus  @default(INTERESTED)
+  status         VisitStatus       @default(INTERESTED)
   followUpDate   DateTime?
   photoUrl       String?
 
-  employee       User         @relation(fields: [employeeId], references: [id])
+  prospect       ProspectCompany?  @relation(fields: [prospectId], references: [id])
+  prospectId     String?
+
+  employee       User              @relation(fields: [employeeId], references: [id])
   employeeId     String
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@index([status])
   @@index([visitDate])
+  @@index([prospectId])
   @@map("company_visits")
 }
 
