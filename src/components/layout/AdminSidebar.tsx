@@ -22,7 +22,7 @@ export function AdminSidebar() {
     <aside className="flex h-[100dvh] md:h-screen w-64 flex-col border-r border-line bg-bg-alt">
       <div className="border-b border-line px-6 py-5">
         <div className="flex items-center gap-2.5">
-          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Febtech Logo" className="w-32 h-auto" />
+          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Febtech Logo" className="w-32 h-auto mx-auto" />
         </div>
       </div>
 

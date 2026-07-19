@@ -5,6 +5,8 @@ import { portfolioCategorySchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 
 // Public -- the "Our Work" page needs this with no login required.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const categories = await prisma.portfolioCategory.findMany({
@@ -55,3 +57,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
+

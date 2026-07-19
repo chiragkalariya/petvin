@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/session";
 import { costingRecordSchema } from "@/lib/validations";
 import { calculateCosting } from "@/lib/costing";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }

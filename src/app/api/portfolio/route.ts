@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/session";
 import { portfolioItemSchema } from "@/lib/validations";
 
 // Public -- powers the "Our Work" page, optionally filtered by ?category=slug
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const categorySlug = req.nextUrl.searchParams.get("category");
@@ -59,3 +61,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
+
