@@ -106,6 +106,7 @@ export function PortfolioManager() {
       if (itemFile) {
         const uploadForm = new FormData();
         uploadForm.append("file", itemFile);
+        uploadForm.append("access", "public");
         const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadForm });
         if (!uploadRes.ok) throw new Error("Photo upload failed");
         const uploadData = await uploadRes.json();

@@ -25,15 +25,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prefix with a timestamp so concurrent uploads never collide.
-    const uniqueName = `inquiries/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+    // The Vercel Blob store is configured as Private, so we MUST use access: 'private'
+    // Determine the folder prefix based on the intended access type (just for organization)
+    const isPublicIntent = formData.get("access") === "public";
+    const folderPrefix = isPublicIntent ? "portfolio" : "inquiries";
+    const uniqueName = `${folderPrefix}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
 
     const blob = await put(uniqueName, file, {
-      access: "public",
+      access: 'private',
     });
 
     return NextResponse.json({ url: blob.url });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }

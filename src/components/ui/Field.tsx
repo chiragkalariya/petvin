@@ -1,8 +1,8 @@
-import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none transition-colors placeholder:text-ink-dimmer";
+  "w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none placeholder:text-ink-dimmer";
 
 interface FieldWrapperProps {
   label?: string;
@@ -32,17 +32,25 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  icon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, id, className, ...props }, ref) => (
+  ({ label, error, hint, id, className, icon, ...props }, ref) => (
     <FieldWrapper label={label} htmlFor={id} error={error} hint={hint}>
-      <input
-        ref={ref}
-        id={id}
-        className={cn(fieldBase, error && "border-accent", className)}
-        {...props}
-      />
+      <div className="relative flex items-center group">
+        {icon && (
+          <div className="absolute left-3.5 text-ink-dimmer transition-colors group-focus-within:text-accent">
+            {icon}
+          </div>
+        )}
+        <input
+          ref={ref}
+          id={id}
+          className={cn(fieldBase, icon && "pl-10", error && "border-accent", className)}
+          {...props}
+        />
+      </div>
     </FieldWrapper>
   )
 );
