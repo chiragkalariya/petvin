@@ -139,7 +139,7 @@ export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
                 <dt className="font-mono text-[11px] uppercase text-ink-dimmer">Attachment</dt>
                 <dd>
                   <a
-                    href={inquiry.fileUrl}
+                    href={`/api/inquiries/${inquiry.id}/attachment`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-accent hover:underline"
