@@ -63,3 +63,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    await requireUser();
+
+    // Unlink costing records if any exist before deleting
+    await prisma.costingRecord.updateMany({
+      where: { inquiryId: params.id },
+      data: { inquiryId: null },
+    });
+
+    await prisma.inquiry.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("Delete inquiry error:", error);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+}
+

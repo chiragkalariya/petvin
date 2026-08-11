@@ -59,7 +59,7 @@ export function ProspectCompanyForm({
 }: {
   prospectId?: string;
   initialValues?: Partial<ProspectFormValues>;
-  onSuccess?: () => void;
+  onSuccess?: (createdProspect?: any) => void;
   onCancel?: () => void;
 }) {
   const [values, setValues] = useState<ProspectFormValues>({ ...EMPTY, ...initialValues });
@@ -84,13 +84,13 @@ export function ProspectCompanyForm({
         body: JSON.stringify(values),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Failed to save");
       }
 
       toast.success(prospectId ? "Company updated" : "Company added");
-      onSuccess?.();
+      onSuccess?.(data.prospect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { EmptyState } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { formatDate, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { PencilIcon, TrashIcon } from "@/components/ui/Icons";
@@ -47,15 +48,22 @@ export function VisitTable() {
       .finally(() => setLoading(false));
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this visit?")) return;
+  const [deletingVisitId, setDeletingVisitId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleConfirmDelete() {
+    if (!deletingVisitId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/visits/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/visits/${deletingVisitId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Visit removed");
       fetchVisits();
     } catch {
       toast.error("Failed to delete visit");
+    } finally {
+      setIsDeleting(false);
+      setDeletingVisitId(null);
     }
   }
 
@@ -143,7 +151,7 @@ export function VisitTable() {
                       <PencilIcon />
                     </Link>
                     <button
-                      onClick={() => handleDelete(v.id)}
+                      onClick={() => setDeletingVisitId(v.id)}
                       className="text-ink-dim hover:text-red-400 transition-colors"
                       title="Delete"
                     >
@@ -156,6 +164,15 @@ export function VisitTable() {
           </tbody>
         </Table>
       )}
+
+      <ConfirmModal
+        isOpen={!!deletingVisitId}
+        title="Delete Visit"
+        message="Are you sure you want to delete this visit log? This action cannot be undone."
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingVisitId(null)}
+      />
     </div>
   );
 }

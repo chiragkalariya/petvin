@@ -24,6 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             style: { background: "#22262B", color: "#EDEEF0", border: "1px solid #383D44" },
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.addEventListener("wheel",function(e){if(document.activeElement&&document.activeElement.type==="number"){document.activeElement.blur();}},{passive:true});`,
+          }}
+        />
       </body>
     </html>
   );

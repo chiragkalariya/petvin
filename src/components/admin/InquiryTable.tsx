@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { EmptyState } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { TrashIcon } from "@/components/ui/Icons";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +32,10 @@ export function InquiryTable() {
   const [inquiries, setInquiries] = useState<InquiryListItem[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingInquiryId, setDeletingInquiryId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
+  const fetchInquiries = useCallback(() => {
     setLoading(true);
     const url = filter ? `/api/inquiries?status=${filter}` : "/api/inquiries";
     fetch(url)
@@ -38,6 +43,26 @@ export function InquiryTable() {
       .then((data) => setInquiries(data.inquiries ?? []))
       .finally(() => setLoading(false));
   }, [filter]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  async function handleDeleteConfirm() {
+    if (!deletingInquiryId) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/inquiries/${deletingInquiryId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast.success("Inquiry removed");
+      fetchInquiries();
+    } catch {
+      toast.error("Failed to delete inquiry");
+    } finally {
+      setIsDeleting(false);
+      setDeletingInquiryId(null);
+    }
+  }
 
   return (
     <div>
@@ -69,6 +94,7 @@ export function InquiryTable() {
             <TH>Assigned</TH>
             <TH>Status</TH>
             <TH>Received</TH>
+            <TH className="text-right">Actions</TH>
           </THead>
           <tbody>
             {inquiries.map((inq) => (
@@ -85,11 +111,30 @@ export function InquiryTable() {
                   <StatusBadge status={inq.status} />
                 </TD>
                 <TD>{formatDate(inq.createdAt)}</TD>
+                <TD className="text-right whitespace-nowrap">
+                  <button
+                    onClick={() => setDeletingInquiryId(inq.id)}
+                    className="text-ink-dim hover:text-red-400 transition-colors"
+                    title="Delete Inquiry"
+                  >
+                    <TrashIcon />
+                  </button>
+                </TD>
               </TRow>
             ))}
           </tbody>
         </Table>
       )}
+
+      <ConfirmModal
+        isOpen={!!deletingInquiryId}
+        title="Remove Inquiry"
+        message="Are you sure you want to delete this inquiry? This action cannot be undone."
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeletingInquiryId(null)}
+      />
     </div>
   );
 }
+

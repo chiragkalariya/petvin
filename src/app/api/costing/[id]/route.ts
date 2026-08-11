@@ -77,7 +77,10 @@ export async function PUT(
     const record = await prisma.costingRecord.update({
       where: { id: params.id },
       data: {
-        title: data.title,
+        title: data.title || (data.companyName ? `Quote for ${data.companyName}` : "Fabrication Quote"),
+        companyName: data.companyName || null,
+        deliveryTime: data.deliveryTime || null,
+        itemsJson: data.itemsJson ? (typeof data.itemsJson === "string" ? data.itemsJson : JSON.stringify(data.itemsJson)) : null,
         materialType: data.materialType,
         thicknessMm: data.thicknessMm,
         weightKg: data.weightKg,

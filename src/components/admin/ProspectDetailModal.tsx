@@ -5,6 +5,7 @@ import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ProspectCompanyForm } from "@/components/admin/ProspectCompanyForm";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -84,8 +85,11 @@ export function ProspectDetailModal({
     fetchProspect();
   }, [fetchProspect]);
 
-  async function handleDelete() {
-    if (!confirm("Are you sure you want to remove this prospect?")) return;
+  const [showDeleteProspectConfirm, setShowDeleteProspectConfirm] = useState(false);
+  const [deletingVisitId, setDeletingVisitId] = useState<string | null>(null);
+  const [isDeletingVisit, setIsDeletingVisit] = useState(false);
+
+  async function handleDeleteProspectConfirm() {
     setDeleting(true);
     try {
       const res = await fetch(`/api/prospects/${prospectId}`, { method: "DELETE" });
@@ -97,18 +101,23 @@ export function ProspectDetailModal({
       toast.error("Failed to delete prospect");
     } finally {
       setDeleting(false);
+      setShowDeleteProspectConfirm(false);
     }
   }
 
-  async function handleDeleteVisit(visitId: string) {
-    if (!confirm("Are you sure you want to delete this visit log?")) return;
+  async function handleDeleteVisitConfirm() {
+    if (!deletingVisitId) return;
+    setIsDeletingVisit(true);
     try {
-      const res = await fetch(`/api/visits/${visitId}`, { method: "DELETE" });
+      const res = await fetch(`/api/visits/${deletingVisitId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Visit removed");
       fetchProspect(); // Refresh the list of visits
     } catch {
       toast.error("Failed to delete visit");
+    } finally {
+      setIsDeletingVisit(false);
+      setDeletingVisitId(null);
     }
   }
 
@@ -263,7 +272,7 @@ export function ProspectDetailModal({
                 <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="danger" isLoading={deleting} onClick={handleDelete}>
+                <Button size="sm" variant="danger" isLoading={deleting} onClick={() => setShowDeleteProspectConfirm(true)}>
                   Delete
                 </Button>
               </div>
@@ -345,7 +354,7 @@ export function ProspectDetailModal({
                               <PencilIcon />
                             </Link>
                             <button
-                              onClick={() => handleDeleteVisit(visit.id)}
+                              onClick={() => setDeletingVisitId(visit.id)}
                               className="text-ink-dim hover:text-red-400 transition-colors"
                               title="Delete"
                             >
@@ -361,6 +370,24 @@ export function ProspectDetailModal({
             </div>
           </>
         )}
+
+        <ConfirmModal
+          isOpen={showDeleteProspectConfirm}
+          title="Remove Prospect"
+          message="Are you sure you want to remove this prospect company? All associated visit logs will also be removed."
+          isLoading={deleting}
+          onConfirm={handleDeleteProspectConfirm}
+          onClose={() => setShowDeleteProspectConfirm(false)}
+        />
+
+        <ConfirmModal
+          isOpen={!!deletingVisitId}
+          title="Delete Visit Log"
+          message="Are you sure you want to delete this visit log? This action cannot be undone."
+          isLoading={isDeletingVisit}
+          onConfirm={handleDeleteVisitConfirm}
+          onClose={() => setDeletingVisitId(null)}
+        />
       </div>
     </div>
   );

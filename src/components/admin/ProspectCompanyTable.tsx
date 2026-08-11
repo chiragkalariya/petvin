@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { cn, formatDate } from "@/lib/utils";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import toast from "react-hot-toast";
 import { EyeIcon, PencilIcon, TrashIcon } from "@/components/ui/Icons";
 
@@ -79,7 +79,7 @@ export function ProspectCompanyTable({
   onLogVisitClick,
   onEditClick,
 }: {
-  onAddClick: () => void;
+  onAddClick?: () => void;
   onViewClick: (id: string) => void;
   onLogVisitClick: (id: string) => void;
   onEditClick: (prospect: ProspectListItem) => void;
@@ -115,43 +115,44 @@ export function ProspectCompanyTable({
     fetchProspects();
   }, [fetchProspects]);
 
-  async function handleDelete(e: React.MouseEvent, id: string) {
-    e.stopPropagation();
-    if (!confirm("Are you sure you want to remove this prospect?")) return;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleConfirmDelete() {
+    if (!deletingId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/prospects/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/prospects/${deletingId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Prospect removed");
       fetchProspects();
     } catch {
       toast.error("Failed to delete prospect");
+    } finally {
+      setIsDeleting(false);
+      setDeletingId(null);
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search + Filters Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <svg
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-dimmer"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search companies, locations, industry..."
-            className="pl-10"
-          />
-        </div>
-        <Button size="sm" onClick={onAddClick}>
-          + Add Company
-        </Button>
+    <div className="space-y-5">
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <svg
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-dimmer"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search companies, locations, industry..."
+          className="pl-10"
+        />
       </div>
 
       {/* Filter Chips */}
@@ -164,7 +165,7 @@ export function ProspectCompanyTable({
               className={cn(
                 "rounded-sm border px-3 py-1.5 font-mono text-[11px] tracking-wide transition-all duration-200",
                 statusFilter === f.value
-                  ? "border-accent bg-accent/10 text-accent"
+                  ? "border-accent bg-accent/10 text-accent font-semibold"
                   : "border-line text-ink-dimmer hover:border-ink-dim hover:text-ink-dim"
               )}
             >
@@ -181,7 +182,7 @@ export function ProspectCompanyTable({
               className={cn(
                 "rounded-sm border px-3 py-1.5 font-mono text-[11px] tracking-wide transition-all duration-200",
                 priorityFilter === f.value
-                  ? "border-accent bg-accent/10 text-accent"
+                  ? "border-accent bg-accent/10 text-accent font-semibold"
                   : "border-line text-ink-dimmer hover:border-ink-dim hover:text-ink-dim"
               )}
             >
@@ -191,156 +192,177 @@ export function ProspectCompanyTable({
         </div>
       </div>
 
-      {/* Results */}
+      {/* Table Results */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="animate-pulse border border-line bg-bg-alt p-5">
-              <div className="h-4 bg-bg-light rounded w-3/4 mb-3" />
-              <div className="h-3 bg-bg-light rounded w-1/2 mb-2" />
-              <div className="h-3 bg-bg-light rounded w-1/3" />
-            </div>
-          ))}
+        <div className="border border-line bg-bg-alt p-8 text-center text-sm text-ink-dimmer animate-pulse">
+          Loading companies...
         </div>
       ) : prospects.length === 0 ? (
         <EmptyState
           title="No prospects found"
-          description={search || statusFilter || priorityFilter ? "Try adjusting your filters." : "Add your first prospect company to get started."}
+          description={
+            search || statusFilter || priorityFilter
+              ? "Try adjusting your filters."
+              : "Add your first prospect company to get started."
+          }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {prospects.map((p) => {
-            const pStyle = PRIORITY_STYLES[p.priority] ?? PRIORITY_STYLES.MEDIUM;
-            const lastVisit = p.visits[0];
+        <Table>
+          <THead>
+            <TH>Company</TH>
+            <TH>Industry</TH>
+            <TH>Contact</TH>
+            <TH>Priority</TH>
+            <TH>Status</TH>
+            <TH>Visits</TH>
+            <TH className="text-right">Actions</TH>
+          </THead>
+          <tbody>
+            {prospects.map((p) => {
+              const pStyle = PRIORITY_STYLES[p.priority] ?? PRIORITY_STYLES.MEDIUM;
+              const lastVisit = p.visits[0];
 
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  "group relative border bg-bg-alt transition-all duration-300 hover:bg-bg-light cursor-pointer",
-                  "border-line hover:border-ink-dim"
-                )}
-                onClick={() => onViewClick(p.id)}
-              >
-                {/* Priority indicator strip */}
-                <div className={cn("absolute left-0 top-0 bottom-0 w-1", pStyle.bg)} />
-
-                <div className="p-5 pl-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-display text-base uppercase text-ink group-hover:text-accent transition-colors truncate">
-                        {p.companyName}
-                      </h3>
-                      {p.location && (
-                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-dimmer">
-                          <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {p.location}
-                        </p>
-                      )}
+              return (
+                <TRow key={p.id} onClick={() => onViewClick(p.id)}>
+                  {/* Company Name & Location */}
+                  <TD>
+                    <div className="font-display text-sm font-semibold uppercase text-ink hover:text-accent transition-colors">
+                      {p.companyName}
                     </div>
-                    {/* Priority badge */}
-                    <span className={cn("flex items-center gap-1.5 rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide", pStyle.bg, pStyle.border, pStyle.text)}>
+                    {p.location && (
+                      <p className="mt-0.5 text-xs text-ink-dimmer flex items-center gap-1">
+                        <svg
+                          className="h-3 w-3 flex-shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {p.location}
+                      </p>
+                    )}
+                  </TD>
+
+                  {/* Industry & Potential Parts */}
+                  <TD>
+                    <p className="text-xs text-ink font-medium">{p.industry || "—"}</p>
+                    {p.potentialParts && (
+                      <p className="text-[11px] text-ink-dimmer truncate max-w-[180px]" title={p.potentialParts}>
+                        {p.potentialParts}
+                      </p>
+                    )}
+                  </TD>
+
+                  {/* Contact Details */}
+                  <TD>
+                    {p.contactPerson ? (
+                      <div>
+                        <p className="text-xs text-ink font-medium">{p.contactPerson}</p>
+                        {(p.contactPhone || p.contactEmail) && (
+                          <p className="text-[11px] text-ink-dimmer font-mono">
+                            {p.contactPhone || p.contactEmail}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-ink-dimmer">—</span>
+                    )}
+                  </TD>
+
+                  {/* Priority */}
+                  <TD>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide",
+                        pStyle.bg,
+                        pStyle.border,
+                        pStyle.text
+                      )}
+                    >
                       <span className={cn("h-1.5 w-1.5 rounded-full", pStyle.dot)} />
                       {p.priority}
                     </span>
-                  </div>
+                  </TD>
 
-                  {/* Industry */}
-                  {p.industry && (
-                    <p className="mb-3 text-xs text-ink-dim">
-                      {p.industry}
-                    </p>
-                  )}
-
-                  {/* Potential Parts Tags */}
-                  {p.potentialParts && (
-                    <div className="mb-3 flex flex-wrap gap-1.5">
-                      {p.potentialParts.split(",").slice(0, 3).map((part, idx) => (
-                        <span key={idx} className="inline-block rounded-sm bg-bg-light px-2 py-0.5 text-[10px] text-ink-dim">
-                          {part.trim()}
-                        </span>
-                      ))}
-                      {p.potentialParts.split(",").length > 3 && (
-                        <span className="inline-block rounded-sm bg-bg-light px-2 py-0.5 text-[10px] text-ink-dimmer">
-                          +{p.potentialParts.split(",").length - 3}
-                        </span>
+                  {/* Status */}
+                  <TD>
+                    <span
+                      className={cn(
+                        "font-mono text-[11px] uppercase tracking-wide font-semibold",
+                        STATUS_STYLES[p.status] ?? "text-ink-dimmer"
                       )}
-                    </div>
-                  )}
+                    >
+                      {p.status.replace(/_/g, " ")}
+                    </span>
+                  </TD>
 
-                  {/* Footer */}
-                  <div className="mt-4 flex items-center justify-between border-t border-line-soft pt-3">
-                    <div className="flex items-center gap-3">
-                      {/* Status */}
-                      <span className={cn("font-mono text-[10px] uppercase tracking-wide", STATUS_STYLES[p.status] ?? "text-ink-dimmer")}>
-                        {p.status.replace(/_/g, " ")}
-                      </span>
-                      {/* Visit count */}
-                      <span className="flex items-center gap-1 text-[10px] text-ink-dimmer">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        {p._count.visits} visit{p._count.visits !== 1 ? "s" : ""}
-                      </span>
+                  {/* Visit Stats */}
+                  <TD>
+                    <div className="font-mono text-xs text-ink font-medium">
+                      {p._count.visits} visit{p._count.visits !== 1 ? "s" : ""}
                     </div>
                     {lastVisit && (
-                      <span className="text-[10px] text-ink-dimmer">
+                      <p className="text-[10px] text-ink-dimmer">
                         Last: {formatDate(lastVisit.visitDate)}
-                      </span>
+                      </p>
                     )}
-                  </div>
+                  </TD>
 
-                  {/* Quick action */}
-                  <div className="mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onLogVisitClick(p.id);
-                      }}
-                      className="flex-1 border border-accent bg-accent/10 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-accent hover:bg-accent/20 transition-colors text-center"
-                      title="Log Visit"
-                    >
-                      Log
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewClick(p.id);
-                      }}
-                      className="flex-1 flex justify-center items-center border border-line px-2 py-1.5 text-ink-dim hover:border-ink-dim hover:text-ink transition-colors text-center"
-                      title="View Details"
-                    >
-                      <EyeIcon />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditClick(p);
-                      }}
-                      className="flex-1 flex justify-center items-center border border-line px-2 py-1.5 text-ink-dim hover:border-ink-dim hover:text-ink transition-colors text-center"
-                      title="Edit Company"
-                    >
-                      <PencilIcon />
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, p.id)}
-                      className="flex-1 flex justify-center items-center border border-red-900 px-2 py-1.5 text-red-400 hover:bg-red-950 transition-colors text-center"
-                      title="Delete Company"
-                    >
-                      <TrashIcon />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  {/* Action Buttons */}
+                  <TD className="text-right">
+                    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => onLogVisitClick(p.id)}
+                        className="border border-accent bg-accent/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-accent hover:bg-accent/20 transition-colors"
+                        title="Log Visit"
+                      >
+                        Log Visit
+                      </button>
+                      <button
+                        onClick={() => onViewClick(p.id)}
+                        className="border border-line p-1.5 text-ink-dim hover:border-ink-dim hover:text-ink transition-colors"
+                        title="View Details"
+                      >
+                        <EyeIcon />
+                      </button>
+                      <button
+                        onClick={() => onEditClick(p)}
+                        className="border border-line p-1.5 text-ink-dim hover:border-ink-dim hover:text-ink transition-colors"
+                        title="Edit Company"
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(p.id)}
+                        className="border border-red-900/60 p-1.5 text-red-400 hover:bg-red-950/60 transition-colors"
+                        title="Delete Company"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </TD>
+                </TRow>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
+
+      <ConfirmModal
+        isOpen={!!deletingId}
+        title="Remove Prospect"
+        message="Are you sure you want to remove this prospect company? All associated visit logs will also be removed."
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingId(null)}
+      />
     </div>
   );
 }
