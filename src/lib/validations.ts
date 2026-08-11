@@ -54,18 +54,21 @@ export const companyVisitSchema = z.object({
 export type CompanyVisitValues = z.infer<typeof companyVisitSchema>;
 
 export const costingRecordSchema = z.object({
-  title: z.string().min(1, "Give this quote a name"),
+  title: z.string().optional().or(z.literal("")),
+  companyName: z.string().optional().or(z.literal("")),
+  deliveryTime: z.string().optional().or(z.literal("")),
+  itemsJson: z.any().optional(),
   materialType: z.string().min(1),
   thicknessMm: z.coerce.number().min(0),
   weightKg: z.coerce.number().min(0),
   materialRatePerKg: z.coerce.number().min(0),
   cuttingLengthM: z.coerce.number().min(0),
   cuttingRatePerM: z.coerce.number().min(0),
-  bendCount: z.coerce.number().int().min(0),
+  bendCount: z.coerce.number().min(0),
   bendRatePerBend: z.coerce.number().min(0),
-  wastagePercent: z.coerce.number().min(0),
-  marginPercent: z.coerce.number().min(0),
-  gstPercent: z.coerce.number().min(0),
+  wastagePercent: z.coerce.number().min(0).default(0),
+  marginPercent: z.coerce.number().min(0).default(0),
+  gstPercent: z.coerce.number().min(0).default(18),
   inquiryId: z.string().optional().or(z.literal("")),
 });
 export type CostingRecordValues = z.infer<typeof costingRecordSchema>;
@@ -92,3 +95,18 @@ export const employeeSchema = z.object({
   role: z.enum(["ADMIN", "EMPLOYEE"]),
 });
 export type EmployeeValues = z.infer<typeof employeeSchema>;
+
+export const materialSchema = z.object({
+  name: z.string().min(1, "Material name is required"),
+  ratePerKg: z.coerce.number().min(0).optional().nullable(),
+  cuttingCostHourly: z.coerce.number().min(0).optional().nullable(),
+  bendingCostHourly: z.coerce.number().min(0).optional().nullable(),
+});
+export type MaterialValues = z.infer<typeof materialSchema>;
+
+export const machineSchema = z.object({
+  name: z.string().min(1, "Machine name is required"),
+  type: z.enum(["CUTTING", "BENDING"]),
+});
+export type MachineValues = z.infer<typeof machineSchema>;
+

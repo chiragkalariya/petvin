@@ -4,15 +4,16 @@ import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { Card, Badge, EmptyState } from "@/components/ui/Card";
+import { Badge, EmptyState } from "@/components/ui/Card";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { TrashIcon } from "@/components/ui/Icons";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  _count: { items: number };
 }
 
 interface PortfolioItemData {
@@ -30,9 +31,8 @@ export function PortfolioManager() {
   const [items, setItems] = useState<PortfolioItemData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [categoryName, setCategoryName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
-
+  // Add Item modal state
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [itemName, setItemName] = useState("");
   const [itemMaterial, setItemMaterial] = useState("");
   const [itemDescription, setItemDescription] = useState("");
@@ -40,7 +40,11 @@ export function PortfolioManager() {
   const [itemFile, setItemFile] = useState<File | null>(null);
   const [addingItem, setAddingItem] = useState(false);
 
-  function load() {
+  // Delete modal state
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
+
+  function loadData() {
     setLoading(true);
     Promise.all([
       fetch("/api/portfolio/categories").then((res) => res.json()),
@@ -56,42 +60,15 @@ export function PortfolioManager() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadData();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleAddCategory(e: FormEvent) {
-    e.preventDefault();
-    if (!categoryName.trim()) return;
-    setAddingCategory(true);
-    try {
-      const res = await fetch("/api/portfolio/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: categoryName }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to add category");
-      }
-      toast.success("Category added");
-      setCategoryName("");
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setAddingCategory(false);
+  useEffect(() => {
+    if (!itemCategoryId && categories.length > 0) {
+      setItemCategoryId(categories[0].id);
     }
-  }
-
-  async function handleDeleteCategory(id: string) {
-    const res = await fetch(`/api/portfolio/categories/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Category deleted");
-      load();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      toast.error(data.error ?? "Could not delete category");
-    }
-  }
+  }, [categories, itemCategoryId]);
 
   async function handleAddItem(e: FormEvent) {
     e.preventDefault();
@@ -135,7 +112,8 @@ export function PortfolioManager() {
       setItemMaterial("");
       setItemDescription("");
       setItemFile(null);
-      load();
+      setShowAddItemModal(false);
+      loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -143,139 +121,168 @@ export function PortfolioManager() {
     }
   }
 
-  async function handleDeleteItem(id: string) {
-    const res = await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Removed");
-      load();
-    } else {
+  async function handleConfirmDeleteItem() {
+    if (!deletingItemId) return;
+    setIsDeletingItem(true);
+    try {
+      const res = await fetch(`/api/portfolio/${deletingItemId}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Removed");
+        loadData();
+      } else {
+        toast.error("Could not remove item");
+      }
+    } catch {
       toast.error("Could not remove item");
+    } finally {
+      setIsDeletingItem(false);
+      setDeletingItemId(null);
     }
   }
 
   return (
-    <div className="space-y-10">
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="p-6">
-          <h3 className="mb-4 font-display text-sm uppercase tracking-wide text-ink">Categories</h3>
-          {categories.length === 0 ? (
-            <EmptyState title="No categories yet" description="Add your first category on the right." />
-          ) : (
-            <ul className="divide-y divide-line-soft">
-              {categories.map((cat) => (
-                <li key={cat.id} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-ink">{cat.name}</span>
-                    <Badge>{cat._count.items} items</Badge>
-                  </div>
+    <div>
+      <PageHeader
+        title="Our Work"
+        description="Manage categories and add finished jobs to the public portfolio."
+        action={
+          <Button size="sm" onClick={() => setShowAddItemModal(true)}>
+            + Add Item
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <p className="text-sm text-ink-dimmer">Loading…</p>
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="No items yet"
+          description="Click '+ Add Item' above to show your finished work on the website."
+        />
+      ) : (
+        <Table>
+          <THead>
+            <TH>Name</TH>
+            <TH>Category</TH>
+            <TH>Material</TH>
+            <TH>Photo</TH>
+            <TH className="text-right">Actions</TH>
+          </THead>
+          <tbody>
+            {items.map((item) => (
+              <TRow key={item.id}>
+                <TD className="text-ink font-medium">{item.name}</TD>
+                <TD>{item.category.name}</TD>
+                <TD>{item.material || "—"}</TD>
+                <TD>
+                  <Badge tone={item.imageUrl ? "success" : "neutral"}>
+                    {item.imageUrl ? "Uploaded" : "Placeholder"}
+                  </Badge>
+                </TD>
+                <TD className="text-right whitespace-nowrap">
                   <button
-                    onClick={() => handleDeleteCategory(cat.id)}
+                    onClick={() => setDeletingItemId(item.id)}
                     className="text-ink-dim hover:text-red-400 transition-colors"
-                    title="Delete Category"
+                    title="Delete Item"
                   >
                     <TrashIcon />
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+                </TD>
+              </TRow>
+            ))}
+          </tbody>
+        </Table>
+      )}
 
-        <Card className="h-fit p-6">
-          <h3 className="mb-4 font-display text-sm uppercase tracking-wide text-ink">Add Category</h3>
-          <form onSubmit={handleAddCategory} className="flex flex-col gap-4">
-            <Input
-              label="Category Name"
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-              placeholder="e.g. Railings"
-            />
-            <Button type="submit" isLoading={addingCategory}>
-              Add Category
-            </Button>
-          </form>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div>
-          <h3 className="mb-4 font-display text-sm uppercase tracking-wide text-ink">Portfolio Items</h3>
-          {loading ? (
-            <p className="text-sm text-ink-dimmer">Loading…</p>
-          ) : items.length === 0 ? (
-            <EmptyState title="No items yet" description="Add a finished job on the right to show it on the site." />
-          ) : (
-            <Table>
-              <THead>
-                <TH>Name</TH>
-                <TH>Category</TH>
-                <TH>Material</TH>
-                <TH>Photo</TH>
-                <TH></TH>
-              </THead>
-              <tbody>
-                {items.map((item) => (
-                  <TRow key={item.id}>
-                    <TD className="text-ink">{item.name}</TD>
-                    <TD>{item.category.name}</TD>
-                    <TD>{item.material || "—"}</TD>
-                    <TD>
-                      <Badge tone={item.imageUrl ? "success" : "neutral"}>
-                        {item.imageUrl ? "Uploaded" : "Placeholder"}
-                      </Badge>
-                    </TD>
-                    <TD>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="text-ink-dim hover:text-red-400 transition-colors"
-                        title="Delete Item"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </TD>
-                  </TRow>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </div>
-
-        <Card className="h-fit p-6">
-          <h3 className="mb-4 font-display text-sm uppercase tracking-wide text-ink">Add to Our Work</h3>
-          <form onSubmit={handleAddItem} className="flex flex-col gap-4">
-            <Input label="Item Name" value={itemName} onChange={(e) => setItemName(e.target.value)} />
-            <Select
-              label="Category"
-              value={itemCategoryId}
-              onChange={(e) => setItemCategoryId(e.target.value)}
-              options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            />
-            <Input
-              label="Material"
-              value={itemMaterial}
-              onChange={(e) => setItemMaterial(e.target.value)}
-              placeholder="e.g. MS 3mm"
-            />
-            <Textarea
-              label="Description (optional)"
-              value={itemDescription}
-              onChange={(e) => setItemDescription(e.target.value)}
-            />
-            <div className="flex flex-col gap-2">
-              <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setItemFile(e.target.files?.[0] ?? null)}
-                className="border border-dashed border-line bg-bg-alt px-4 py-3.5 text-sm text-ink-dim file:mr-3 file:border-0 file:bg-bg-light file:px-3 file:py-1.5 file:text-ink"
-              />
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div
+          onClick={() => setShowAddItemModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200 my-8"
+          >
+            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
+              <h3 className="font-display text-base uppercase text-ink tracking-wide">
+                Add Portfolio Item
+              </h3>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="text-ink-dimmer hover:text-ink transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <Button type="submit" isLoading={addingItem}>
-              Add Item
-            </Button>
-          </form>
-        </Card>
-      </div>
+
+            <form onSubmit={handleAddItem} className="flex flex-col gap-4">
+              <Input
+                label="Item Name"
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value)}
+                placeholder="e.g. Laser Cut Balcony Railing"
+                autoFocus
+                required
+              />
+              <Select
+                label="Category"
+                value={itemCategoryId}
+                onChange={(e) => setItemCategoryId(e.target.value)}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              />
+              <Input
+                label="Material"
+                value={itemMaterial}
+                onChange={(e) => setItemMaterial(e.target.value)}
+                placeholder="e.g. MS 3mm"
+              />
+              <Textarea
+                label="Description (optional)"
+                value={itemDescription}
+                onChange={(e) => setItemDescription(e.target.value)}
+                placeholder="Optional description"
+              />
+              <div className="flex flex-col gap-2">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">
+                  Photo
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setItemFile(e.target.files?.[0] ?? null)}
+                  className="border border-dashed border-line bg-bg-alt px-4 py-3 text-sm text-ink-dim file:mr-3 file:border-0 file:bg-bg-light file:px-3 file:py-1 file:text-xs file:font-semibold file:text-ink cursor-pointer"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddItemModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" isLoading={addingItem}>
+                  Add Item
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingItemId}
+        title="Delete Item"
+        message="Are you sure you want to delete this portfolio item?"
+        isLoading={isDeletingItem}
+        onConfirm={handleConfirmDeleteItem}
+        onClose={() => setDeletingItemId(null)}
+      />
     </div>
   );
 }

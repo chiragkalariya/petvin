@@ -4,16 +4,32 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, SpecRow } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { PageHeader } from "@/components/admin/PageHeader";
+import { ProspectCompanyForm } from "@/components/admin/ProspectCompanyForm";
 import { MATERIAL_TYPES } from "@/lib/costing";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const THICKNESS_OPTIONS = ["1 mm", "1.5 mm", "2 mm", "2.5 mm", "3 mm", "4 mm", "5 mm", "6 mm", "8 mm", "10 mm", "12 mm"];
-const CUTTING_MACHINES = ["Fiber Laser 3KW", "Fiber Laser 6KW", "CO2 Laser 2KW", "Plasma Cutter", "Waterjet"];
-const BENDING_MACHINES = ["160 Ton CNC", "100 Ton CNC", "80 Ton CNC", "60 Ton CNC", "Hand Brake"];
+const HOURS_OPTIONS = Array.from({ length: 49 }, (_, i) => i);   // 0 – 48
+const MINUTES_OPTIONS = Array.from({ length: 60 }, (_, i) => i); // 0 – 59
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface DbMaterial {
+  id: string;
+  name: string;
+  ratePerKg: number | null;
+  cuttingCostHourly: number | null;
+  bendingCostHourly: number | null;
+}
+
+interface DbMachine {
+  id: string;
+  name: string;
+  type: "CUTTING" | "BENDING";
+}
 
 interface CostingItem {
   id: string;
@@ -25,9 +41,11 @@ interface CostingItem {
   cuttingMachine: string;
   cuttingLengthM: number;
   cuttingRatePerM: number;
+  cuttingTimeMin: number;
   bendingMachine: string;
   bendCount: number;
   bendRatePerBend: number;
+  bendingTimeMin: number;
 }
 
 interface ComputedItem extends CostingItem {
@@ -41,7 +59,10 @@ interface ComputedItem extends CostingItem {
 
 interface SavedRecord {
   id: string;
-  title: string;
+  title?: string | null;
+  companyName?: string | null;
+  deliveryTime?: string | null;
+  itemsJson?: string | null;
   materialType: string;
   thicknessMm: number;
   weightKg: number;
@@ -71,18 +92,16 @@ type View = "list" | "form";
 
 function computeItem(item: CostingItem): ComputedItem {
   const materialCost = item.weightKg * item.materialRatePerKg;
-  const cuttingCost = item.cuttingLengthM * item.cuttingRatePerM;
-  const bendingCost = item.bendCount * item.bendRatePerBend;
-  const cuttingTimeMin = item.cuttingLengthM; // 1 MTR/min
-  const bendingTimeMin = item.bendCount * 1.2; // 1.2 min/bend
+  const cuttingCost = (item.cuttingTimeMin / 60) * item.cuttingRatePerM;
+  const bendingCost = (item.bendingTimeMin / 60) * item.bendRatePerBend;
   return {
     ...item,
     materialCost: round2(materialCost),
     cuttingCost: round2(cuttingCost),
     bendingCost: round2(bendingCost),
     total: round2(materialCost + cuttingCost + bendingCost),
-    cuttingTimeMin,
-    bendingTimeMin,
+    cuttingTimeMin: item.cuttingTimeMin,
+    bendingTimeMin: item.bendingTimeMin,
   };
 }
 
@@ -116,63 +135,326 @@ function defaultItem(): CostingItem {
   return {
     id: uid(),
     partName: "",
-    materialType: MATERIAL_TYPES[0],
+    materialType: "",
     thicknessMm: 0,
     materialRatePerKg: 0,
     weightKg: 0,
-    cuttingMachine: CUTTING_MACHINES[0],
+    cuttingMachine: "",
     cuttingLengthM: 0,
     cuttingRatePerM: 0,
-    bendingMachine: BENDING_MACHINES[0],
+    cuttingTimeMin: 0,
+    bendingMachine: "",
     bendCount: 0,
     bendRatePerBend: 0,
+    bendingTimeMin: 0,
   };
 }
 
 // ─── PDF printer ──────────────────────────────────────────────────────────────
 
-function printCostingRecord(record: SavedRecord) {
-  const win = window.open("", "_blank", "width=900,height=700");
-  if (!win) { toast.error("Pop-up blocked – allow pop-ups and try again."); return; }
+function printCostingRecord(record: Partial<SavedRecord>, itemsList?: ComputedItem[]) {
+  const titleText = record.companyName ? `Quote for ${record.companyName}` : record.title || "Fabrication Quote";
+  const quoteId = record.id ? record.id.slice(-8).toUpperCase() : "DRAFT";
+  const dateStr = record.createdAt ? formatDate(record.createdAt) : formatDate(new Date().toISOString());
 
-  const rows = [
-    ["Material Cost", formatCurrency(record.materialCost)],
-    ["Cutting Cost", formatCurrency(record.cuttingCost)],
-    ["Bending Cost", formatCurrency(record.bendingCost)],
-    ["Wastage", formatCurrency(record.wastageCost)],
-    ["Subtotal", formatCurrency(record.subtotal)],
-    [`Margin (${record.marginPercent}%)`, formatCurrency(record.marginAmount)],
-    [`GST (${record.gstPercent}%)`, formatCurrency(record.taxAmount)],
-  ].map(([k, v]) => `<tr>
-    <td style="padding:10px 14px;border-bottom:1px solid #eee;color:#666;font-size:13px;">${k}</td>
-    <td style="padding:10px 14px;border-bottom:1px solid #eee;text-align:right;font-family:monospace;font-size:13px;color:#FF6A1A;">${v}</td>
-  </tr>`).join("");
+  // Determine items to render
+  let itemList: ComputedItem[] = [];
+  if (itemsList && itemsList.length > 0) {
+    itemList = itemsList;
+  } else if (record.itemsJson) {
+    try {
+      const parsed = JSON.parse(record.itemsJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        itemList = parsed.map((it) => computeItem(it));
+      }
+    } catch (e) {}
+  }
 
-  win.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
-  <title>Quote – ${record.title}</title>
-  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:#fff;color:#111;padding:40px}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #FF6A1A;padding-bottom:20px;margin-bottom:28px}
-  .company{font-size:22px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#FF6A1A}
-  .company small{display:block;font-size:11px;font-weight:400;color:#666;letter-spacing:2px;margin-top:2px;color:#333}
-  .meta{text-align:right;font-size:12px;color:#555;line-height:1.7}
-  h1{font-size:18px;font-weight:700;margin-bottom:6px}
-  .badge{display:inline-block;background:#fff3ee;border:1px solid #FF6A1A;padding:3px 10px;font-size:11px;border-radius:3px;color:#FF6A1A;margin-bottom:20px}
-  table{width:100%;border-collapse:collapse;margin-bottom:4px}
-  .total-row td{padding:14px;font-size:17px;font-weight:700;border-top:2px solid #FF6A1A;color:#FF6A1A}
-  .footer{margin-top:40px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}
-  @media print{body{padding:20px}}</style></head>
-  <body>
-  <div class="header"><div><div class="company">Petvin Febtech<small>Laser Cutting &amp; Fabrication</small></div></div>
-  <div class="meta"><div><strong>Quote Date:</strong> ${formatDate(record.createdAt)}</div>
-  ${record.inquiry ? `<div><strong>Client:</strong> ${record.inquiry.name}${record.inquiry.company ? ` · ${record.inquiry.company}` : ""}</div>` : ""}
-  <div><strong>Quote ID:</strong> ${record.id.slice(-8).toUpperCase()}</div></div></div>
-  <h1>${record.title}</h1><div class="badge">${record.materialType}</div>
-  <table><tbody>${rows}
-  <tr class="total-row"><td>GRAND TOTAL (incl. GST)</td><td style="text-align:right">${formatCurrency(record.totalCost)}</td></tr>
-  </tbody></table>
-  <div class="footer">Computer-generated quotation · Valid 30 days · Petvin Febtech</div>
-  <script>setTimeout(()=>{window.print();window.close()},400)</script></body></html>`);
-  win.document.close();
+  if (itemList.length === 0) {
+    itemList = [
+      {
+        id: record.id ?? "1",
+        partName: record.title || titleText,
+        materialType: record.materialType ?? "",
+        thicknessMm: record.thicknessMm ?? 0,
+        materialRatePerKg: record.materialRatePerKg ?? 0,
+        weightKg: record.weightKg ?? 0,
+        cuttingMachine: "",
+        cuttingLengthM: record.cuttingLengthM ?? 0,
+        cuttingRatePerM: record.cuttingRatePerM ?? 0,
+        cuttingTimeMin: Math.round((record.cuttingLengthM ?? 0) * 60),
+        bendingMachine: "",
+        bendCount: record.bendCount ?? 0,
+        bendRatePerBend: record.bendRatePerBend ?? 0,
+        bendingTimeMin: Math.round((record.bendCount ?? 0) * 60),
+        materialCost: record.materialCost ?? 0,
+        cuttingCost: record.cuttingCost ?? 0,
+        bendingCost: record.bendingCost ?? 0,
+        total: (record.materialCost ?? 0) + (record.cuttingCost ?? 0) + (record.bendingCost ?? 0),
+      },
+    ];
+  }
+
+  const totalItemsCount = itemList.length;
+  const totalWeightKg = round2(itemList.reduce((s, i) => s + (i.weightKg || 0), 0));
+  const totalMaterialCost = round2(itemList.reduce((s, i) => s + (i.materialCost || 0), 0));
+  const totalCuttingCost = round2(itemList.reduce((s, i) => s + (i.cuttingCost || 0), 0));
+  const totalBendingCost = round2(itemList.reduce((s, i) => s + (i.bendingCost || 0), 0));
+  const subtotal = round2(itemList.reduce((s, i) => s + (i.total || (i.materialCost + i.cuttingCost + i.bendingCost)), 0));
+  const gstPercent = record.gstPercent ?? 18;
+  const taxAmount = round2((subtotal * gstPercent) / 100);
+  const grandTotal = round2(subtotal + taxAmount);
+
+  // Badge text
+  const badgeText = totalItemsCount > 1
+    ? `${totalItemsCount} ITEMS`
+    : `${itemList[0]?.materialType ?? "QUOTE"}${itemList[0]?.thicknessMm ? ` · ${itemList[0].thicknessMm}MM` : ""}`;
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${titleText} - ${quoteId}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background: #fff; color: #1f2937; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    
+    .page-container { position: relative; border: 1px solid #e5e7eb; padding: 32px 36px; min-height: 960px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+    
+    /* Corner Tick Marks */
+    .corner { position: absolute; width: 14px; height: 14px; border-color: #FF6A1A; border-style: solid; }
+    .corner-tl { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+    .corner-tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+    .corner-bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+    .corner-br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #FF6A1A; padding-bottom: 16px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 38px; height: 38px; border: 1.5px solid #111; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+    .brand-logo svg { width: 22px; height: 22px; stroke: #111; }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; line-height: 1; text-transform: uppercase; }
+    .brand-title .dark { color: #111; }
+    .brand-title .orange { color: #FF6A1A; }
+    .brand-sub { font-size: 9px; font-family: monospace; letter-spacing: 1.5px; color: #6b7280; font-weight: 600; margin-top: 5px; text-transform: uppercase; }
+
+    .meta { text-align: right; font-size: 11px; font-family: monospace; color: #6b7280; line-height: 1.6; text-transform: uppercase; }
+    .meta strong { color: #111; font-weight: 700; }
+
+    /* Title Row */
+    .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .title-row h1 { font-size: 22px; font-weight: 800; color: #111; }
+    .pill-badge { border: 1px solid #ffd8cc; background: #fff5f0; color: #FF6A1A; font-family: monospace; font-size: 11px; padding: 5px 14px; border-radius: 2px; font-weight: 700; text-transform: uppercase; }
+
+    /* Table */
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .items-table thead th { background: #1B1E22; color: #ffffff; font-family: monospace; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 10px 12px; text-align: left; }
+    .items-table thead th.text-right { text-align: right; }
+    .items-table tbody td { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 12px; font-size: 12px; color: #111; }
+    .items-table tbody td.text-right { text-align: right; }
+    .sub-info { font-size: 10px; font-family: monospace; color: #6b7280; margin-top: 3px; }
+    .items-table tfoot td { background: #fff; border-top: 1px solid #111; padding: 12px; font-weight: 700; font-size: 12px; font-family: monospace; }
+    .items-table tfoot td.text-right { text-align: right; }
+
+    /* Summary Table */
+    .summary-wrap { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .summary-box { width: 330px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; color: #4b5563; font-family: monospace; }
+    .summary-row.subtotal { border-top: 1px solid #e5e7eb; padding-top: 8px; font-weight: 600; color: #111; }
+    .summary-row.gst { border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+    .summary-row .val { text-align: right; color: #111; font-weight: 600; }
+
+    /* Grand Total Hero Box */
+    .hero-gt { border: 1.5px solid #111; position: relative; padding: 14px 18px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+    .hero-gt .gt-left { font-family: monospace; }
+    .hero-gt .gt-left .label { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #111; display: block; }
+    .hero-gt .gt-left .sub { font-size: 9px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; }
+    .hero-gt .gt-amount { font-family: monospace; font-size: 24px; font-weight: 800; color: #FF6A1A; }
+    .hero-gt .corner-accent { position: absolute; right: -3px; bottom: -3px; width: 6px; height: 6px; border-right: 2px solid #FF6A1A; border-bottom: 2px solid #FF6A1A; }
+
+    /* Footer */
+    .footer { margin-top: auto; padding-top: 16px; border-top: 1px dashed #d1d5db; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-family: monospace; color: #9ca3af; }
+    .footer-left { display: flex; align-items: center; gap: 6px; }
+
+    @media print {
+      body { padding: 0; }
+      .page-container { border: none; padding: 16px; min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <div>
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+
+      <!-- Header -->
+      <div class="header">
+        <div class="brand">
+          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Febtech Logo" style="height: 46px; width: auto; display: block;" />
+        </div>
+        <div class="meta">
+          <div>QUOTE DATE <strong>${dateStr}</strong></div>
+          <div>CLIENT / COMPANY <strong>${record.companyName || "XYZ"}</strong></div>
+          <div>DELIVERY TIME <strong>${record.deliveryTime || "—"}</strong></div>
+          <div>QUOTE ID <strong>${quoteId}</strong></div>
+        </div>
+      </div>
+
+      <!-- Title & Badge -->
+      <div class="title-row">
+        <h1>${titleText}</h1>
+        <div class="pill-badge">${badgeText}</div>
+      </div>
+
+      <!-- Items Table -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 32px; text-align: center;">#</th>
+            <th>ITEM / PART</th>
+            <th class="text-right">MATERIAL</th>
+            <th class="text-right">CUTTING</th>
+            <th class="text-right">BENDING</th>
+            <th class="text-right">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemList
+            .map((it, idx) => {
+              const cutH = Math.floor(it.cuttingTimeMin / 60);
+              const cutM = Math.round(it.cuttingTimeMin % 60);
+              const cutTime = it.cuttingTimeMin > 0 ? `${cutH}h ${String(cutM).padStart(2, "0")}m` : "—";
+              const cutMach = it.cuttingMachine ? `${it.cuttingMachine} · ` : "";
+
+              const bendH = Math.floor(it.bendingTimeMin / 60);
+              const bendM = Math.round(it.bendingTimeMin % 60);
+              const bendTime = it.bendingTimeMin > 0 ? `${bendH}h ${String(bendM).padStart(2, "0")}m` : "—";
+              const bendMach = it.bendingMachine ? `${it.bendingMachine} · ` : "";
+
+              const itemTotal = it.total || (it.materialCost + it.cuttingCost + it.bendingCost);
+
+              return `
+            <tr>
+              <td style="text-align: center; font-family: monospace; font-weight: 700; color: #6b7280;">${idx + 1}</td>
+              <td>
+                <strong>${it.partName || titleText}</strong>
+                <div class="sub-info">${it.materialType ? `${it.materialType} · ` : ""}${it.thicknessMm ? `${it.thicknessMm}MM thk` : ""}</div>
+              </td>
+              <td class="text-right">
+                <strong>${formatCurrency(it.materialCost)}</strong>
+                <div class="sub-info">${it.weightKg} KG @ ₹${it.materialRatePerKg}/KG</div>
+              </td>
+              <td class="text-right">
+                <strong>${formatCurrency(it.cuttingCost)}</strong>
+                <div class="sub-info">${cutTime}${it.cuttingRatePerM > 0 ? ` @ ₹${it.cuttingRatePerM}/hr` : ""}</div>
+              </td>
+              <td class="text-right">
+                <strong>${formatCurrency(it.bendingCost)}</strong>
+                <div class="sub-info">${bendTime}${it.bendRatePerBend > 0 ? ` @ ₹${it.bendRatePerBend}/hr` : ""}</div>
+              </td>
+              <td class="text-right font-mono">
+                <strong>${formatCurrency(itemTotal)}</strong>
+              </td>
+            </tr>
+          `;
+            })
+            .join("")}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total — ${totalItemsCount} ${totalItemsCount === 1 ? "item" : "items"}${totalWeightKg > 0 ? ` · ${totalWeightKg} KG` : ""}</td>
+            <td class="text-right">${formatCurrency(totalMaterialCost)}</td>
+            <td class="text-right">${formatCurrency(totalCuttingCost)}</td>
+            <td class="text-right">${formatCurrency(totalBendingCost)}</td>
+            <td class="text-right" style="color: #FF6A1A; font-weight: 800;">${formatCurrency(subtotal)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Financial Summary -->
+      <div class="summary-wrap">
+        <div class="summary-box">
+          <div class="summary-row">
+            <span>Material Cost</span>
+            <span class="val">${formatCurrency(totalMaterialCost)}</span>
+          </div>
+          <div class="summary-row">
+            <span>Cutting Cost</span>
+            <span class="val">${formatCurrency(totalCuttingCost)}</span>
+          </div>
+          <div class="summary-row">
+            <span>Bending Cost</span>
+            <span class="val">${formatCurrency(totalBendingCost)}</span>
+          </div>
+          <div class="summary-row subtotal">
+            <span>Items Subtotal</span>
+            <span class="val">${formatCurrency(subtotal)}</span>
+          </div>
+          <div class="summary-row gst">
+            <span>GST (${gstPercent}%)</span>
+            <span class="val">${formatCurrency(taxAmount)}</span>
+          </div>
+
+          <!-- Grand Total Hero Box -->
+          <div class="hero-gt">
+            <div class="corner-accent"></div>
+            <div class="gt-left">
+              <span class="label">GRAND TOTAL</span>
+              <span class="sub">INCLUDES GST</span>
+            </div>
+            <div class="gt-amount">${formatCurrency(grandTotal)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-left">
+        <img src="/images/petvin_febtech_updated.svg" alt="Petvin Logo" style="height: 14px; width: auto; display: inline-block; vertical-align: middle;" />
+        <span>Computer generated quotation - Valid 30 days · Petvin Febtech</span>
+      </div>
+      <div>Page 1 of 1</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  // Print directly in the current browser window using a hidden iframe
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    toast.error("Could not generate print document.");
+    return;
+  }
+
+  doc.open();
+  doc.write(htmlContent);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 1000);
+  }, 300);
 }
 
 // ─── View Modal ───────────────────────────────────────────────────────────────
@@ -185,13 +467,15 @@ function ViewModal({ record, onClose, onEdit }: { record: SavedRecord; onClose: 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const displayTitle = record.companyName ? `${record.companyName}${record.title ? ` – ${record.title}` : ""}` : record.title || "Fabrication Quote";
+
   return (
     <div ref={overlayRef} onClick={(e) => e.target === overlayRef.current && onClose()}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-lg border border-line bg-bg-alt shadow-2xl">
         <div className="flex items-start justify-between border-b border-line p-5">
           <div>
-            <p className="font-display text-lg font-semibold uppercase tracking-wide text-ink">{record.title}</p>
+            <p className="font-display text-lg font-semibold uppercase tracking-wide text-ink">{displayTitle}</p>
             <p className="mt-0.5 text-xs text-ink-dimmer">{record.materialType} · {record.thicknessMm} mm · {formatDate(record.createdAt)}</p>
           </div>
           <button onClick={onClose} className="ml-4 text-ink-dimmer hover:text-ink">
@@ -201,9 +485,11 @@ function ViewModal({ record, onClose, onEdit }: { record: SavedRecord; onClose: 
           </button>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-line-soft px-5 py-3">
-          {[["Weight", `${record.weightKg} kg`], ["Rate/kg", formatCurrency(record.materialRatePerKg)],
-          ["Cut Length", `${record.cuttingLengthM} m`], ["Bends", String(record.bendCount)],
-          ["Wastage", `${record.wastagePercent}%`], ["Margin", `${record.marginPercent}%`], ["GST", `${record.gstPercent}%`]
+          {[
+            ["Weight", `${record.weightKg} kg`],
+            ["Rate/kg", formatCurrency(record.materialRatePerKg)],
+            ["Delivery", record.deliveryTime || "—"],
+            ["GST", `${record.gstPercent}%`]
           ].map(([k, v]) => (
             <div key={k}><p className="font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">{k}</p>
               <p className="text-sm font-medium text-ink">{v}</p></div>
@@ -213,9 +499,7 @@ function ViewModal({ record, onClose, onEdit }: { record: SavedRecord; onClose: 
           <SpecRow k="Material Cost" v={formatCurrency(record.materialCost)} />
           <SpecRow k="Cutting Cost" v={formatCurrency(record.cuttingCost)} />
           <SpecRow k="Bending Cost" v={formatCurrency(record.bendingCost)} />
-          <SpecRow k="Wastage" v={formatCurrency(record.wastageCost)} />
           <SpecRow k="Subtotal" v={formatCurrency(record.subtotal)} />
-          <SpecRow k="Margin" v={formatCurrency(record.marginAmount)} />
           <SpecRow k="GST" v={formatCurrency(record.taxAmount)} />
           <div className="mt-3 flex items-center justify-between border-t border-line pt-4">
             <span className="font-display uppercase tracking-wide text-ink">Total</span>
@@ -288,41 +572,64 @@ function SavedCostingList({ records, loading, onView, onEdit, onDelete, onAdd, o
         </button>
       </div>
       <div className="divide-y divide-line-soft">
-        {records.map((r) => (
-          <div key={r.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-bg-light/40">
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-ink">{r.title}</p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <Badge tone="neutral">{r.materialType}</Badge>
-                {r.thicknessMm > 0 && <span className="font-mono text-[11px] text-ink-dimmer">{r.thicknessMm} mm</span>}
-                <span className="text-[11px] text-ink-dimmer">{formatDate(r.createdAt)}</span>
-                {r.inquiry && <span className="font-mono text-[11px] text-accent">{r.inquiry.name}</span>}
+        {records.map((r) => {
+          const titleLine = r.companyName ? `${r.companyName}${r.title ? ` – ${r.title}` : ""}` : r.title || "Fabrication Quote";
+          return (
+            <div key={r.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-bg-light/40">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-ink">{titleLine}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">{r.materialType}</Badge>
+                  {r.thicknessMm > 0 && <span className="font-mono text-[11px] text-ink-dimmer">{r.thicknessMm} mm</span>}
+                  {r.deliveryTime && <span className="font-mono text-[11px] text-accent">Delivery: {r.deliveryTime}</span>}
+                  <span className="text-[11px] text-ink-dimmer">{formatDate(r.createdAt)}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-mono text-base font-semibold text-accent">{formatCurrency(r.totalCost)}</p>
+                <p className="font-mono text-[10px] text-ink-dimmer">incl. GST</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <button
+                  onClick={() => onView(r)}
+                  className="text-ink-dim hover:text-accent transition-colors"
+                  title="View Quote"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onEdit(r)}
+                  className="text-ink-dim hover:text-accent transition-colors"
+                  title="Edit Quote"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => printCostingRecord(r)}
+                  className="text-ink-dim hover:text-accent transition-colors"
+                  title="Download PDF"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onDelete(r.id)}
+                  className="text-ink-dim hover:text-red-400 transition-colors"
+                  title="Delete Quote"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="shrink-0 text-right">
-              <p className="font-mono text-base font-semibold text-accent">{formatCurrency(r.totalCost)}</p>
-              <p className="font-mono text-[10px] text-ink-dimmer">incl. GST</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-              {[
-                { label: "View", icon: "M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178zM15 12a3 3 0 11-6 0 3 3 0 016 0z", onClick: () => onView(r) },
-                { label: "Edit", icon: "M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z", onClick: () => onEdit(r) },
-                { label: "PDF", icon: "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3", onClick: () => printCostingRecord(r) },
-              ].map(({ label, icon, onClick }) => (
-                <button key={label} onClick={onClick} className="flex items-center gap-1 border border-line px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-dim transition-colors hover:border-accent hover:text-accent">
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={icon} /></svg>
-                  {label}
-                </button>
-              ))}
-              <button onClick={() => onDelete(r.id)} className="flex items-center gap-1 border border-red-900/40 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-red-500/60 transition-colors hover:border-red-700 hover:text-red-400">
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                </svg>
-                Del
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -355,12 +662,16 @@ function FInput({ value, onChange, type = "text", placeholder, step, min, classN
 
 function FSelect({ value, onChange, options, className = "" }: {
   value: string; onChange: (v: string) => void;
-  options: string[]; className?: string;
+  options: (string | { value: string; label: string })[]; className?: string;
 }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}
       className={`w-full border border-line bg-bg text-ink px-3 py-2 text-sm focus:border-accent focus:outline-none transition-colors ${className}`}>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {options.map((opt) => {
+        const val = typeof opt === "string" ? opt : opt.value;
+        const lbl = typeof opt === "string" ? opt : opt.label;
+        return <option key={val} value={val}>{lbl}</option>;
+      })}
     </select>
   );
 }
@@ -396,42 +707,103 @@ let _pendingBendingTimeMin = 0;
 
 function AddItemForm({
   draft,
+  dbMaterials,
+  dbMachines,
   onChange,
   onAdd,
 }: {
   draft: CostingItem;
+  dbMaterials: DbMaterial[];
+  dbMachines: DbMachine[];
   onChange: (key: keyof CostingItem, value: string | number) => void;
   onAdd: () => void;
 }) {
   const computed = useMemo(() => computeItem(draft), [draft]);
 
-  // Editable Est. Time strings (HH:MM). Auto-suggest from computed, but user can override.
+  const materialTypeOptions = useMemo(() => {
+    const list = dbMaterials.map((m) => m.name);
+    return [
+      { value: "", label: list.length > 0 ? "-- Select Material --" : "-- No materials added --" },
+      ...list.map((name) => ({ value: name, label: name })),
+    ];
+  }, [dbMaterials]);
+
+  const cuttingMachineOptions = useMemo(() => {
+    const list = dbMachines.filter((m) => m.type === "CUTTING").map((m) => m.name);
+    return [
+      { value: "", label: list.length > 0 ? "-- Select Machine --" : "-- No machines added --" },
+      ...list.map((name) => ({ value: name, label: name })),
+    ];
+  }, [dbMachines]);
+
+  const bendingMachineOptions = useMemo(() => {
+    const list = dbMachines.filter((m) => m.type === "BENDING").map((m) => m.name);
+    return [
+      { value: "", label: list.length > 0 ? "-- Select Machine --" : "-- No machines added --" },
+      ...list.map((name) => ({ value: name, label: name })),
+    ];
+  }, [dbMachines]);
+
+  // Pre-select first available machine from Machine Master if present
+  useEffect(() => {
+    if (!dbMachines.length) return;
+
+    if (!draft.cuttingMachine) {
+      const firstCutting = dbMachines.find((m) => m.type === "CUTTING");
+      if (firstCutting) {
+        onChange("cuttingMachine", firstCutting.name);
+      }
+    }
+
+    if (!draft.bendingMachine) {
+      const firstBending = dbMachines.find((m) => m.type === "BENDING");
+      if (firstBending) {
+        onChange("bendingMachine", firstBending.name);
+      }
+    }
+  }, [dbMachines, draft.cuttingMachine, draft.bendingMachine, onChange]);
+
+  // Auto-populate material rate, cutting cost, and bending cost from material master
+  useEffect(() => {
+    if (!draft.materialType || !dbMaterials.length) return;
+    const match = dbMaterials.find((m) => m.name === draft.materialType);
+    if (match) {
+      if (typeof match.ratePerKg === "number" && match.ratePerKg > 0) {
+        onChange("materialRatePerKg", match.ratePerKg);
+      }
+      if (typeof match.cuttingCostHourly === "number" && match.cuttingCostHourly > 0) {
+        onChange("cuttingRatePerM", match.cuttingCostHourly);
+      }
+      if (typeof match.bendingCostHourly === "number" && match.bendingCostHourly > 0) {
+        onChange("bendRatePerBend", match.bendingCostHourly);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.materialType, dbMaterials]);
+
+  // Editable Est. Time strings (HH:MM).
   const [cuttingTimeStr, setCuttingTimeStr] = useState("");
   const [bendingTimeStr, setBendingTimeStr] = useState("");
 
-  // When cutting length changes and user hasn't typed a time yet, auto-suggest
   useEffect(() => {
-    if (!cuttingTimeStr || cuttingTimeStr === "00:00") {
-      setCuttingTimeStr(computed.cuttingTimeMin > 0 ? formatTime(computed.cuttingTimeMin) : "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.cuttingLengthM]);
+    setCuttingTimeStr(draft.cuttingTimeMin > 0 ? formatTime(draft.cuttingTimeMin) : "");
+    setBendingTimeStr(draft.bendingTimeMin > 0 ? formatTime(draft.bendingTimeMin) : "");
+  }, [draft.cuttingTimeMin, draft.bendingTimeMin, draft.id]);
 
-  useEffect(() => {
-    if (!bendingTimeStr || bendingTimeStr === "00:00") {
-      setBendingTimeStr(computed.bendingTimeMin > 0 ? formatTime(computed.bendingTimeMin) : "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.bendCount]);
+  function handleCuttingTimeChange(val: string) {
+    setCuttingTimeStr(val);
+    const mins = hhmmToMinutes(val);
+    onChange("cuttingTimeMin", mins);
+  }
+
+  function handleBendingTimeChange(val: string) {
+    setBendingTimeStr(val);
+    const mins = hhmmToMinutes(val);
+    onChange("bendingTimeMin", mins);
+  }
 
   function handleAdd() {
-    // Inject the manually-entered times (in minutes) before calling onAdd
-    // We store them temporarily via onChange so CostingForm can read them on add.
-    // Use a wrapper approach: pass time context through a closure captured here.
-    _pendingCuttingTimeMin = cuttingTimeStr ? hhmmToMinutes(cuttingTimeStr) : computed.cuttingTimeMin;
-    _pendingBendingTimeMin = bendingTimeStr ? hhmmToMinutes(bendingTimeStr) : computed.bendingTimeMin;
     onAdd();
-    // Reset time fields
     setCuttingTimeStr("");
     setBendingTimeStr("");
   }
@@ -468,19 +840,9 @@ function AddItemForm({
         {/* ② Material Cost */}
         <div className="p-4">
           <SectionHeader num={2} title="Material Cost" />
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <FLabel>Material</FLabel>
-              <FSelect value={draft.materialType} onChange={(v) => onChange("materialType", v)} options={[...MATERIAL_TYPES]} />
-            </div>
-            <div>
-              <FLabel>Thickness</FLabel>
-              <FSelect
-                value={`${draft.thicknessMm} mm`}
-                onChange={(v) => onChange("thicknessMm", parseThickness(v))}
-                options={THICKNESS_OPTIONS}
-              />
-            </div>
+          <div>
+            <FLabel>Material</FLabel>
+            <FSelect value={draft.materialType} onChange={(v) => onChange("materialType", v)} options={materialTypeOptions} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
@@ -512,39 +874,49 @@ function AddItemForm({
           <SectionHeader num={3} title="Cutting Cost" />
           <div>
             <FLabel>Machine</FLabel>
-            <FSelect value={draft.cuttingMachine} onChange={(v) => onChange("cuttingMachine", v)} options={CUTTING_MACHINES} />
+            <FSelect value={draft.cuttingMachine} onChange={(v) => onChange("cuttingMachine", v)} options={cuttingMachineOptions} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
-              <FLabel>Cutting Length</FLabel>
-              <div className="flex items-stretch">
-                <FInput type="number" min={0} step={0.1} value={draft.cuttingLengthM}
-                  onChange={(v) => onChange("cuttingLengthM", Number(v))} className="flex-1" />
-                <span className="flex items-center border border-l-0 border-line bg-bg-light px-2 font-mono text-[11px] text-ink-dimmer">MTR</span>
-              </div>
-            </div>
-            <div>
-              <FLabel>Rate (₹/MTR)</FLabel>
+              <FLabel>Rate (₹/Hr)</FLabel>
               <FInput type="number" min={0} step={0.5} value={draft.cuttingRatePerM}
                 onChange={(v) => onChange("cuttingRatePerM", Number(v))} />
             </div>
-          </div>
-          <div className="mt-3">
-            <FLabel>Est. Time (HH:MM)</FLabel>
-            <div className="flex items-center border border-line bg-bg">
-              <span className="flex shrink-0 items-center pl-3 pr-1.5">
-                <svg className="h-3.5 w-3.5 text-ink-dimmer" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={cuttingTimeStr}
-                onChange={(e) => setCuttingTimeStr(e.target.value)}
-                placeholder="00:00"
-                maxLength={5}
-                className="w-full bg-transparent py-2 pr-3 font-mono text-sm text-ink placeholder:text-ink-dimmer focus:outline-none"
-              />
+            <div>
+              <FLabel>Est. Time</FLabel>
+              <div className="flex items-center gap-1">
+                <select
+                  value={Math.floor(draft.cuttingTimeMin / 60)}
+                  onChange={(e) => {
+                    const h = Number(e.target.value);
+                    const m = draft.cuttingTimeMin % 60;
+                    const hh = String(h).padStart(2, "0");
+                    const mm = String(m).padStart(2, "0");
+                    handleCuttingTimeChange(`${hh}:${mm}`);
+                  }}
+                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
+                >
+                  {HOURS_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
+                  ))}
+                </select>
+                <span className="text-ink-dimmer font-mono text-sm font-bold">:</span>
+                <select
+                  value={draft.cuttingTimeMin % 60}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    const h = Math.floor(draft.cuttingTimeMin / 60);
+                    const hh = String(h).padStart(2, "0");
+                    const mm = String(m).padStart(2, "0");
+                    handleCuttingTimeChange(`${hh}:${mm}`);
+                  }}
+                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
+                >
+                  {MINUTES_OPTIONS.map((m) => (
+                    <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <CostBadge label="Cutting Cost" value={computed.cuttingCost} />
@@ -562,36 +934,49 @@ function AddItemForm({
           <SectionHeader num={4} title="Bending Cost" />
           <div>
             <FLabel>Machine</FLabel>
-            <FSelect value={draft.bendingMachine} onChange={(v) => onChange("bendingMachine", v)} options={BENDING_MACHINES} />
+            <FSelect value={draft.bendingMachine} onChange={(v) => onChange("bendingMachine", v)} options={bendingMachineOptions} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
-              <FLabel>No. of Bends</FLabel>
-              <FInput type="number" min={0} step={1} value={draft.bendCount}
-                onChange={(v) => onChange("bendCount", Number(v))} />
-            </div>
-            <div>
-              <FLabel>Rate (₹/Bend)</FLabel>
+              <FLabel>Rate (₹/Hr)</FLabel>
               <FInput type="number" min={0} step={0.5} value={draft.bendRatePerBend}
                 onChange={(v) => onChange("bendRatePerBend", Number(v))} />
             </div>
-          </div>
-          <div className="mt-3">
-            <FLabel>Est. Time (HH:MM)</FLabel>
-            <div className="flex items-center border border-line bg-bg">
-              <span className="flex shrink-0 items-center pl-3 pr-1.5">
-                <svg className="h-3.5 w-3.5 text-ink-dimmer" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={bendingTimeStr}
-                onChange={(e) => setBendingTimeStr(e.target.value)}
-                placeholder="00:00"
-                maxLength={5}
-                className="w-full bg-transparent py-2 pr-3 font-mono text-sm text-ink placeholder:text-ink-dimmer focus:outline-none"
-              />
+            <div>
+              <FLabel>Est. Time</FLabel>
+              <div className="flex items-center gap-1">
+                <select
+                  value={Math.floor(draft.bendingTimeMin / 60)}
+                  onChange={(e) => {
+                    const h = Number(e.target.value);
+                    const m = draft.bendingTimeMin % 60;
+                    const hh = String(h).padStart(2, "0");
+                    const mm = String(m).padStart(2, "0");
+                    handleBendingTimeChange(`${hh}:${mm}`);
+                  }}
+                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
+                >
+                  {HOURS_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
+                  ))}
+                </select>
+                <span className="text-ink-dimmer font-mono text-sm font-bold">:</span>
+                <select
+                  value={draft.bendingTimeMin % 60}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    const h = Math.floor(draft.bendingTimeMin / 60);
+                    const hh = String(h).padStart(2, "0");
+                    const mm = String(m).padStart(2, "0");
+                    handleBendingTimeChange(`${hh}:${mm}`);
+                  }}
+                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
+                >
+                  {MINUTES_OPTIONS.map((m) => (
+                    <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <CostBadge label="Bending Cost" value={computed.bendingCost} />
@@ -667,9 +1052,9 @@ function ItemsTable({
               {/* Material sub-headers */}
               <th colSpan={5} className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer bg-accent/5">Material Cost</th>
               {/* Cutting sub-headers */}
-              <th colSpan={5} className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Cutting Cost</th>
+              <th colSpan={4} className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Cutting Cost</th>
               {/* Bending sub-headers */}
-              <th colSpan={5} className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer bg-accent/5">Bending Cost</th>
+              <th colSpan={4} className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer bg-accent/5">Bending Cost</th>
               <th className="border-l border-line px-3 py-2.5 text-right font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Total (₹)</th>
               <th className="border-l border-line px-3 py-2.5 text-center font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Actions</th>
             </tr>
@@ -681,11 +1066,11 @@ function ItemsTable({
                 <th key={h} className={`px-3 py-1.5 text-left font-mono text-[9px] uppercase tracking-wider text-ink-dimmer ${h === "Material" ? "border-l border-line" : ""}`}>{h}</th>
               ))}
               {/* Cutting */}
-              {["Machine", "Length", "Rate (₹/MTR)", "Time", "Amt (₹)"].map((h) => (
+              {["Machine", "Rate (₹/Hr)", "Est. Time", "Amt (₹)"].map((h) => (
                 <th key={h} className={`px-3 py-1.5 text-left font-mono text-[9px] uppercase tracking-wider text-ink-dimmer ${h === "Machine" ? "border-l border-line" : ""}`}>{h}</th>
               ))}
               {/* Bending */}
-              {["Machine", "Bends", "Rate (₹/Bend)", "Time", "Amt (₹)"].map((h) => (
+              {["Machine", "Rate (₹/Hr)", "Est. Time", "Amt (₹)"].map((h) => (
                 <th key={h} className={`px-3 py-1.5 text-left font-mono text-[9px] uppercase tracking-wider text-ink-dimmer ${h === "Machine" ? "border-l border-line" : ""}`}>{h}</th>
               ))}
               <th className="border-l border-line px-3 py-1.5"></th>
@@ -704,14 +1089,12 @@ function ItemsTable({
                 <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{item.materialRatePerKg.toFixed(2)}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-accent">{item.materialCost.toFixed(2)}</td>
                 {/* Cutting */}
-                <td className="border-l border-line-soft px-3 py-3 text-ink-dim text-[12px]">{item.cuttingMachine}</td>
-                <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{item.cuttingLengthM} MTR</td>
+                <td className="border-l border-line-soft px-3 py-3 text-ink-dim text-[12px]">{item.cuttingMachine || "—"}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{item.cuttingRatePerM.toFixed(2)}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{formatTime(item.cuttingTimeMin)}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-accent">{item.cuttingCost.toFixed(2)}</td>
                 {/* Bending */}
-                <td className="border-l border-line-soft px-3 py-3 text-ink-dim text-[12px]">{item.bendingMachine}</td>
-                <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{item.bendCount}</td>
+                <td className="border-l border-line-soft px-3 py-3 text-ink-dim text-[12px]">{item.bendingMachine || "—"}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{item.bendRatePerBend.toFixed(2)}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-ink-dim">{formatTime(item.bendingTimeMin)}</td>
                 <td className="px-3 py-3 font-mono text-[12px] text-accent">{item.bendingCost.toFixed(2)}</td>
@@ -745,13 +1128,9 @@ function ItemsTable({
               <td className="px-3 py-3 font-mono text-[12px] text-ink">{round2(totals.weightKg)} KG</td>
               <td className="px-3 py-3"></td>
               <td className="px-3 py-3 font-mono text-sm text-accent">{round2(totals.materialCost).toFixed(2)}</td>
-              <td className="border-l border-line-soft px-3 py-3" colSpan={2}></td>
-              <td className="px-3 py-3"></td>
-              <td className="px-3 py-3"></td>
+              <td className="border-l border-line-soft px-3 py-3" colSpan={3}></td>
               <td className="px-3 py-3 font-mono text-sm text-accent">{round2(totals.cuttingCost).toFixed(2)}</td>
-              <td className="border-l border-line-soft px-3 py-3" colSpan={2}></td>
-              <td className="px-3 py-3 font-mono text-[12px] text-ink">{round2(totals.bendCount)}</td>
-              <td className="px-3 py-3"></td>
+              <td className="border-l border-line-soft px-3 py-3" colSpan={3}></td>
               <td className="px-3 py-3 font-mono text-sm text-accent">{round2(totals.bendingCost).toFixed(2)}</td>
               <td className="border-l border-line-soft px-3 py-3 text-right font-mono text-sm text-accent">{round2(totals.total).toFixed(2)}</td>
               <td className="border-l border-line-soft px-3 py-3"></td>
@@ -769,120 +1148,354 @@ function ItemsTable({
   );
 }
 
+// ─── Save Quote Modal ─────────────────────────────────────────────────────────
+
+interface ProspectOption {
+  id: string;
+  companyName: string;
+  location?: string | null;
+  industry?: string | null;
+}
+
+function SaveQuoteModal({
+  isOpen,
+  companyName,
+  deliveryTime,
+  saving,
+  onClose,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  companyName: string;
+  deliveryTime: string;
+  saving: boolean;
+  onClose: () => void;
+  onConfirm: (data: { companyName: string; deliveryTime: string }) => void;
+}) {
+  const [compName, setCompName] = useState(companyName);
+  const [delDate, setDelDate] = useState(deliveryTime);
+  const [prospects, setProspects] = useState<ProspectOption[]>([]);
+  const [loadingProspects, setLoadingProspects] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchProspects = useCallback(() => {
+    setLoadingProspects(true);
+    fetch("/api/prospects")
+      .then((res) => res.json())
+      .then((data) => setProspects(data.prospects ?? []))
+      .catch(() => { })
+      .finally(() => setLoadingProspects(false));
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCompName(companyName);
+      const today = new Date().toISOString().split("T")[0];
+      setDelDate(deliveryTime || today);
+      fetchProspects();
+    }
+  }, [companyName, deliveryTime, isOpen, fetchProspects]);
+
+  // Outside click listener to close dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (!isOpen) return null;
+
+  const filteredProspects = prospects.filter((p) =>
+    p.companyName.toLowerCase().includes(compName.toLowerCase()) ||
+    (p.location && p.location.toLowerCase().includes(compName.toLowerCase())) ||
+    (p.industry && p.industry.toLowerCase().includes(compName.toLowerCase()))
+  );
+
+  function handleSelectProspect(p: ProspectOption) {
+    setCompName(p.companyName);
+    setShowDropdown(false);
+  }
+
+  function handleCreateCompanySuccess(createdProspect?: any) {
+    fetchProspects();
+    if (createdProspect?.companyName) {
+      setCompName(createdProspect.companyName);
+    }
+    setShowAddModal(false);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!compName.trim()) {
+      toast.error("Company name is required");
+      return;
+    }
+    if (!delDate.trim()) {
+      toast.error("Delivery date is required");
+      return;
+    }
+    onConfirm({ companyName: compName.trim(), deliveryTime: delDate.trim() });
+  }
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-md border border-line bg-bg-alt p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+        >
+          <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-accent/15 text-accent border border-accent/20">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                </svg>
+              </div>
+              <h3 className="font-display text-base font-semibold uppercase tracking-wide text-ink">
+                Save Quote
+              </h3>
+            </div>
+            <button onClick={onClose} className="text-ink-dimmer hover:text-ink transition-colors">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Searchable Company Name Combobox */}
+            <div className="relative" ref={dropdownRef}>
+              <FLabel>Company Name *</FLabel>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={compName}
+                  onChange={(e) => {
+                    setCompName(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Select or search prospect company..."
+                  className="w-full border border-line bg-bg text-ink px-3 py-2 text-sm focus:border-accent focus:outline-none transition-colors pr-8"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDropdown((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-dimmer hover:text-ink"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Dropdown List */}
+              {showDropdown && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto border border-line bg-bg shadow-xl">
+                  {loadingProspects ? (
+                    <div className="px-3 py-2.5 text-xs text-ink-dimmer">Loading companies...</div>
+                  ) : filteredProspects.length > 0 ? (
+                    <div className="divide-y divide-line-soft">
+                      {filteredProspects.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleSelectProspect(p)}
+                          className="w-full px-3 py-2 text-left text-xs hover:bg-bg-light transition-colors flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="font-semibold text-ink">{p.companyName}</span>
+                            {p.location && <span className="ml-1.5 text-[10px] text-ink-dimmer">({p.location})</span>}
+                          </div>
+                          {p.industry && <span className="text-[10px] text-accent font-mono">{p.industry}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2 text-xs text-ink-dimmer">No matching company found</div>
+                  )}
+
+                  {/* Create New Company Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDropdown(false);
+                      setShowAddModal(true);
+                    }}
+                    className="w-full border-t border-line px-3 py-2.5 text-left font-mono text-xs uppercase text-accent hover:bg-accent/10 transition-colors flex items-center gap-1.5 font-bold bg-bg-alt"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    + Create "{compName.trim() || "New Company"}"
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <FLabel>Delivery Date *</FLabel>
+              <input
+                type="date"
+                value={delDate}
+                onChange={(e) => setDelDate(e.target.value)}
+                className="w-full border border-line bg-bg text-ink px-3 py-2 text-sm focus:border-accent focus:outline-none transition-colors [color-scheme:dark]"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" isLoading={saving}>
+                Save Quote
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Add Prospect Company Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-8">
+          <div
+            className="relative w-full max-w-2xl border border-line bg-bg shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 p-6 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6 border-b border-line pb-3">
+              <h2 className="font-display text-xl uppercase text-ink">Add Prospect Company</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-ink-dimmer hover:text-ink">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <ProspectCompanyForm
+              initialValues={{ companyName: compName }}
+              onSuccess={handleCreateCompanySuccess}
+              onCancel={() => setShowAddModal(false)}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Quotation Summary ────────────────────────────────────────────────────────
 
 function QuotationSummary({
   items,
-  title,
-  wastagePercent,
-  marginPercent,
   gstPercent,
-  onWastageChange,
-  onMarginChange,
   onGstChange,
 }: {
   items: ComputedItem[];
-  title: string;
-  wastagePercent: number;
-  marginPercent: number;
   gstPercent: number;
-  onWastageChange: (v: number) => void;
-  onMarginChange: (v: number) => void;
   onGstChange: (v: number) => void;
 }) {
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.total, 0), [items]);
-  const wastageCost = round2(subtotal * wastagePercent / 100);
-  const afterWastage = subtotal + wastageCost;
-  const marginAmount = round2(afterWastage * marginPercent / 100);
-  const taxableAmount = afterWastage + marginAmount;
-  const taxAmount = round2(taxableAmount * gstPercent / 100);
-  const grandTotal = round2(taxableAmount + taxAmount);
+  const materialSubtotal = useMemo(() => items.reduce((s, i) => s + i.materialCost, 0), [items]);
+  const cuttingSubtotal = useMemo(() => items.reduce((s, i) => s + i.cuttingCost, 0), [items]);
+  const bendingSubtotal = useMemo(() => items.reduce((s, i) => s + i.bendingCost, 0), [items]);
+
+  const taxAmount = round2(subtotal * gstPercent / 100);
+  const grandTotal = round2(subtotal + taxAmount);
 
   return (
-    <div className="border border-line bg-bg-alt">
+    <div className="border border-line bg-gradient-to-b from-bg-alt to-bg shadow-xl">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-line px-5 py-3">
-        <svg className="h-4 w-4 text-accent" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-        </svg>
-        <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-accent">Quotation Summary</span>
+      <div className="flex items-center justify-between border-b border-line px-5 py-3.5 bg-bg-light/30">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-accent/15 text-accent border border-accent/20">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-2.25-3.75 2.25-3.75-2.25-3.75 2.25V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+            </svg>
+          </div>
+          <span className="font-mono text-xs font-bold uppercase tracking-widest text-accent">Quotation Summary</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone="neutral">{items.length} {items.length === 1 ? "Item" : "Items"}</Badge>
+        </div>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[1fr_1.2fr]">
-        {/* Left: Adjustment controls */}
-        <div className="border-b border-line p-5 lg:border-b-0 lg:border-r">
-          <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Adjustments</p>
-
-          <div className="space-y-4">
-            {/* Quote title */}
-            <div>
-              <FLabel>Quote Title *</FLabel>
-              <p className="border border-line bg-bg px-3 py-2 text-sm text-ink">{title || <span className="text-ink-dimmer italic">Enter title above</span>}</p>
+      <div className="grid gap-0 lg:grid-cols-[1.1fr_1fr]">
+        {/* Left: Cost Breakdown & Tax Config */}
+        <div className="border-b border-line p-5 lg:border-b-0 lg:border-r space-y-5">
+          {/* Per-category breakdown */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Cost Breakdown</p>
+              <span className="font-mono text-[10px] text-ink-dimmer">Material + Cut + Bend</span>
             </div>
-
-            {/* Controls */}
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <FLabel>Wastage %</FLabel>
-                <FInput type="number" min={0} step={0.5} value={wastagePercent}
-                  onChange={(v) => onWastageChange(Number(v))} />
+              <div className="border border-line bg-bg/60 p-3">
+                <p className="font-mono text-[10px] uppercase text-ink-dimmer">Material</p>
+                <p className="font-mono text-sm font-semibold text-ink mt-1">{formatCurrency(materialSubtotal)}</p>
               </div>
-              <div>
-                <FLabel>Margin %</FLabel>
-                <FInput type="number" min={0} step={0.5} value={marginPercent}
-                  onChange={(v) => onMarginChange(Number(v))} />
+              <div className="border border-line bg-bg/60 p-3">
+                <p className="font-mono text-[10px] uppercase text-ink-dimmer">Cutting</p>
+                <p className="font-mono text-sm font-semibold text-ink mt-1">{formatCurrency(cuttingSubtotal)}</p>
               </div>
-              <div>
-                <FLabel>GST %</FLabel>
-                <FInput type="number" min={0} step={0.5} value={gstPercent}
-                  onChange={(v) => onGstChange(Number(v))} />
+              <div className="border border-line bg-bg/60 p-3">
+                <p className="font-mono text-[10px] uppercase text-ink-dimmer">Bending</p>
+                <p className="font-mono text-sm font-semibold text-ink mt-1">{formatCurrency(bendingSubtotal)}</p>
               </div>
             </div>
           </div>
 
-          {/* Per-category breakdown */}
-          {items.length > 0 && (
-            <div className="mt-5 border-t border-line-soft pt-4">
-              <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Cost Breakdown</p>
-              <div className="space-y-0">
-                {[
-                  ["Material", round2(items.reduce((s, i) => s + i.materialCost, 0))],
-                  ["Cutting", round2(items.reduce((s, i) => s + i.cuttingCost, 0))],
-                  ["Bending", round2(items.reduce((s, i) => s + i.bendingCost, 0))],
-                ].map(([k, v]) => (
-                  <div key={String(k)} className="flex items-center justify-between border-b border-line-soft py-2.5 last:border-none">
-                    <span className="text-sm text-ink-dim">{k}</span>
-                    <span className="font-mono text-sm text-ink">{formatCurrency(Number(v))}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Tax Setting */}
+          <div className="border-t border-line-soft pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-ink">GST Tax Percentage</p>
+              <p className="text-[11px] text-ink-dimmer">Applied on items subtotal</p>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                value={gstPercent}
+                onChange={(e) => onGstChange(Number(e.target.value))}
+                className="w-20 border border-line bg-bg px-2.5 py-1.5 font-mono text-sm text-right text-ink focus:border-accent focus:outline-none"
+              />
+              <span className="font-mono text-xs font-semibold text-accent">%</span>
+            </div>
+          </div>
         </div>
 
-        {/* Right: Final computation */}
-        <div className="p-5">
-          <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">Final Calculation</p>
-          <div className="space-y-0">
-            {[
-              { k: "Items Subtotal", v: formatCurrency(round2(subtotal)), muted: false },
-              { k: `Wastage (${wastagePercent}%)`, v: `+ ${formatCurrency(wastageCost)}`, muted: true },
-              { k: "After Wastage", v: formatCurrency(round2(afterWastage)), muted: false },
-              { k: `Margin (${marginPercent}%)`, v: `+ ${formatCurrency(marginAmount)}`, muted: true },
-              { k: "Taxable Amount", v: formatCurrency(round2(taxableAmount)), muted: false },
-              { k: `GST (${gstPercent}%)`, v: `+ ${formatCurrency(taxAmount)}`, muted: true },
-            ].map(({ k, v, muted }) => (
-              <div key={k} className="flex items-center justify-between border-b border-line-soft py-2.5 last:border-none">
-                <span className={`text-sm ${muted ? "text-ink-dimmer" : "text-ink-dim"}`}>{k}</span>
-                <span className={`font-mono text-sm ${muted ? "text-ink-dimmer" : "text-ink"}`}>{v}</span>
+        {/* Right: Final Financial Calculation */}
+        <div className="p-5 flex flex-col justify-between bg-bg/30">
+          <div>
+            <p className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Final Calculation</p>
+            <div className="space-y-2 border-b border-line pb-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-ink-dim">Items Subtotal</span>
+                <span className="font-mono font-medium text-ink">{formatCurrency(round2(subtotal))}</span>
               </div>
-            ))}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-ink-dimmer">GST ({gstPercent}%)</span>
+                <span className="font-mono text-accent">+ {formatCurrency(taxAmount)}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Grand total */}
-          <div className="mt-4 flex items-center justify-between border border-accent/30 bg-accent/5 px-4 py-4">
-            <span className="font-display text-base uppercase tracking-wide text-ink">Grand Total (incl. GST)</span>
-            <span className="font-mono text-2xl font-bold text-accent">{formatCurrency(grandTotal)}</span>
+          {/* Grand total hero block */}
+          <div className="mt-4 border border-accent/40 bg-gradient-to-r from-accent/15 via-accent/5 to-transparent p-4 flex items-center justify-between shadow-lg">
+            <div>
+              <span className="font-display text-sm uppercase tracking-wider text-ink font-bold block">Grand Total</span>
+              <span className="text-[10px] font-mono text-ink-dimmer uppercase tracking-widest">Includes GST</span>
+            </div>
+            <span className="font-mono text-2xl font-bold text-accent drop-shadow">{formatCurrency(grandTotal)}</span>
           </div>
         </div>
       </div>
@@ -893,24 +1506,78 @@ function QuotationSummary({
 // ─── Costing Form (full page) ─────────────────────────────────────────────────
 
 function CostingForm({
-  editingId,
-  initialTitle,
+  editingRecord,
   onSaved,
   onCancel,
 }: {
-  editingId: string | null;
-  initialTitle: string;
+  editingRecord: SavedRecord | null;
   onSaved: () => void;
   onCancel: () => void;
 }) {
-  const [title, setTitle] = useState(initialTitle);
+  const editingId = editingRecord?.id ?? null;
+  const [companyName, setCompanyName] = useState(editingRecord?.companyName ?? "");
+  const [deliveryTime, setDeliveryTime] = useState(editingRecord?.deliveryTime ?? "");
+
   const [items, setItems] = useState<CostingItem[]>([]);
   const [draft, setDraft] = useState<CostingItem>(defaultItem());
+  const [dbMaterials, setDbMaterials] = useState<DbMaterial[]>([]);
+  const [dbMachines, setDbMachines] = useState<DbMachine[]>([]);
   const [editItemId, setEditItemId] = useState<string | null>(null);
-  const [wastagePercent, setWastagePercent] = useState(5);
-  const [marginPercent, setMarginPercent] = useState(15);
-  const [gstPercent, setGstPercent] = useState(18);
+  const [gstPercent, setGstPercent] = useState(editingRecord?.gstPercent ?? 18);
   const [saving, setSaving] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/materials").then((r) => r.json()),
+      fetch("/api/machines").then((r) => r.json()),
+    ])
+      .then(([matData, macData]) => {
+        setDbMaterials(matData.materials ?? []);
+        setDbMachines(macData.machines ?? []);
+      })
+      .catch(() => { });
+  }, []);
+
+  useEffect(() => {
+    if (editingRecord) {
+      setCompanyName(editingRecord.companyName ?? "");
+      setDeliveryTime(editingRecord.deliveryTime ?? "");
+      setGstPercent(editingRecord.gstPercent ?? 18);
+
+      if (editingRecord.itemsJson) {
+        try {
+          const parsed = JSON.parse(editingRecord.itemsJson);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItems(parsed);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      const initialItem: CostingItem = {
+        id: uid(),
+        partName: editingRecord.title ?? "Item 1",
+        materialType: editingRecord.materialType || MATERIAL_TYPES[0],
+        thicknessMm: editingRecord.thicknessMm || 0,
+        materialRatePerKg: editingRecord.materialRatePerKg || 0,
+        weightKg: editingRecord.weightKg || 0,
+        cuttingMachine: "",
+        cuttingLengthM: editingRecord.cuttingLengthM || 0,
+        cuttingRatePerM: editingRecord.cuttingRatePerM || 0,
+        cuttingTimeMin: Math.round((editingRecord.cuttingLengthM || 0) * 60),
+        bendingMachine: "",
+        bendCount: editingRecord.bendCount || 0,
+        bendRatePerBend: editingRecord.bendRatePerBend || 0,
+        bendingTimeMin: Math.round((editingRecord.bendCount || 0) * 60),
+      };
+      setItems([initialItem]);
+    } else {
+      setCompanyName("");
+      setDeliveryTime("");
+      setItems([]);
+    }
+  }, [editingRecord]);
 
   const computedItems = useMemo(() => items.map(computeItem), [items]);
 
@@ -920,7 +1587,6 @@ function CostingForm({
 
   function handleAddItem() {
     if (editItemId) {
-      // Update existing
       setItems((prev) => prev.map((it) => it.id === editItemId ? { ...draft, id: editItemId } : it));
       setEditItemId(null);
     } else {
@@ -939,53 +1605,59 @@ function CostingForm({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
   function handleDeleteItem(id: string) {
-    if (!confirm("Remove this item?")) return;
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    if (editItemId === id) { setEditItemId(null); setDraft(defaultItem()); }
+    setDeletingItemId(id);
+  }
+
+  function confirmRemoveItem() {
+    if (!deletingItemId) return;
+    setItems((prev) => prev.filter((i) => i.id !== deletingItemId));
+    if (editItemId === deletingItemId) { setEditItemId(null); setDraft(defaultItem()); }
+    setDeletingItemId(null);
   }
 
   function resetAll() {
-    setTitle("");
+    setCompanyName("");
+    setDeliveryTime("");
     setItems([]);
     setDraft(defaultItem());
     setEditItemId(null);
-    setWastagePercent(5);
-    setMarginPercent(15);
     setGstPercent(18);
   }
 
-  async function handleSave() {
-    if (!title.trim()) { toast.error("Give this quote a title first"); return; }
-    if (items.length === 0) { toast.error("Add at least one item"); return; }
+  function handleOpenSaveModal() {
+    if (items.length === 0) { toast.error("Add at least one item first"); return; }
+    setShowSaveModal(true);
+  }
 
-    const subtotal = computedItems.reduce((s, i) => s + i.total, 0);
-    const wastageCost = round2(subtotal * wastagePercent / 100);
-    const afterWastage = subtotal + wastageCost;
-    const marginAmount = round2(afterWastage * marginPercent / 100);
-    const taxableAmount = afterWastage + marginAmount;
-    const taxAmount = round2(taxableAmount * gstPercent / 100);
-    const grandTotal = round2(taxableAmount + taxAmount);
+  async function handleConfirmSaveModal(data: { companyName: string; deliveryTime: string }) {
+    setCompanyName(data.companyName);
+    setDeliveryTime(data.deliveryTime);
 
     const totalWeightKg = round2(computedItems.reduce((s, i) => s + i.weightKg, 0));
     const totalMaterialCost = round2(computedItems.reduce((s, i) => s + i.materialCost, 0));
-    const totalCuttingLengthM = round2(computedItems.reduce((s, i) => s + i.cuttingLengthM, 0));
+    const totalCuttingTimeHours = round2(computedItems.reduce((s, i) => s + (i.cuttingTimeMin / 60), 0));
     const totalCuttingCost = round2(computedItems.reduce((s, i) => s + i.cuttingCost, 0));
-    const totalBendCount = computedItems.reduce((s, i) => s + i.bendCount, 0);
+    const totalBendingTimeHours = round2(computedItems.reduce((s, i) => s + (i.bendingTimeMin / 60), 0));
     const totalBendingCost = round2(computedItems.reduce((s, i) => s + i.bendingCost, 0));
 
     const payload = {
-      title,
+      title: `Quote for ${data.companyName}`,
+      companyName: data.companyName,
+      deliveryTime: data.deliveryTime,
+      itemsJson: computedItems,
       materialType: items[0]?.materialType ?? MATERIAL_TYPES[0],
       thicknessMm: items[0]?.thicknessMm ?? 0,
       weightKg: totalWeightKg,
       materialRatePerKg: totalWeightKg > 0 ? round2(totalMaterialCost / totalWeightKg) : 0,
-      cuttingLengthM: totalCuttingLengthM,
-      cuttingRatePerM: totalCuttingLengthM > 0 ? round2(totalCuttingCost / totalCuttingLengthM) : 0,
-      bendCount: totalBendCount,
-      bendRatePerBend: totalBendCount > 0 ? round2(totalBendingCost / totalBendCount) : 0,
-      wastagePercent,
-      marginPercent,
+      cuttingLengthM: totalCuttingTimeHours,
+      cuttingRatePerM: totalCuttingTimeHours > 0 ? round2(totalCuttingCost / totalCuttingTimeHours) : 0,
+      bendCount: totalBendingTimeHours,
+      bendRatePerBend: totalBendingTimeHours > 0 ? round2(totalBendingCost / totalBendingTimeHours) : 0,
+      wastagePercent: 0,
+      marginPercent: 0,
       gstPercent,
     };
 
@@ -995,10 +1667,11 @@ function CostingForm({
       const method = editingId ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to save quote");
+        const resData = await res.json().catch(() => ({}));
+        throw new Error(resData.error ?? "Failed to save quote");
       }
       toast.success(editingId ? "Quote updated" : "Quote saved");
+      setShowSaveModal(false);
       onSaved();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -1007,45 +1680,49 @@ function CostingForm({
     }
   }
 
+  function handlePrintDraft() {
+    if (computedItems.length === 0) {
+      toast.error("Add at least one item first");
+      return;
+    }
+    printCostingRecord(
+      {
+        companyName: companyName || "Client",
+        deliveryTime: deliveryTime,
+        gstPercent: gstPercent,
+      },
+      computedItems
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={onCancel}
-            className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-dimmer transition-colors hover:text-ink">
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            Back to list
-          </button>
           {editingId && (
             <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-accent">
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
               </svg>
-              Editing
+              Editing Quote
             </span>
           )}
         </div>
         <div className="flex items-center gap-3">
-          {/* Quote title inline */}
-          <div className="flex items-center gap-2">
-            <FLabel>Quote Title</FLabel>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. MS Bracket – Batch 5"
-              className="w-56 border border-line bg-bg text-ink px-3 py-2 text-sm focus:border-accent focus:outline-none transition-colors placeholder:text-ink-dimmer"
-            />
-          </div>
+          <Button variant="outline" size="sm" onClick={handlePrintDraft} className="gap-1.5">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231a1.125 1.125 0 01-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-19.126 0C1.068 7.441.3 8.375.3 9.456v6.294A2.25 2.25 0 002.55 18h1.091" />
+            </svg>
+            Print PDF
+          </Button>
           <Button variant="outline" size="sm" onClick={resetAll} className="gap-1.5">
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
             Reset
           </Button>
-          <Button size="sm" onClick={handleSave} isLoading={saving} className="gap-1.5">
+          <Button size="sm" onClick={handleOpenSaveModal} isLoading={saving} className="gap-1.5">
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
             </svg>
@@ -1055,7 +1732,7 @@ function CostingForm({
       </div>
 
       {/* Add Item form */}
-      <AddItemForm draft={draft} onChange={handleDraftChange} onAdd={handleAddItem} />
+      <AddItemForm draft={draft} dbMaterials={dbMaterials} dbMachines={dbMachines} onChange={handleDraftChange} onAdd={handleAddItem} />
 
       {/* Items table */}
       <ItemsTable items={computedItems} onEdit={handleEditItem} onDelete={handleDeleteItem} />
@@ -1063,13 +1740,25 @@ function CostingForm({
       {/* Quotation Summary */}
       <QuotationSummary
         items={computedItems}
-        title={title}
-        wastagePercent={wastagePercent}
-        marginPercent={marginPercent}
         gstPercent={gstPercent}
-        onWastageChange={setWastagePercent}
-        onMarginChange={setMarginPercent}
         onGstChange={setGstPercent}
+      />
+
+      <SaveQuoteModal
+        isOpen={showSaveModal}
+        companyName={companyName}
+        deliveryTime={deliveryTime}
+        saving={saving}
+        onClose={() => setShowSaveModal(false)}
+        onConfirm={handleConfirmSaveModal}
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingItemId}
+        title="Remove Item"
+        message="Are you sure you want to remove this item from the quote?"
+        onConfirm={confirmRemoveItem}
+        onClose={() => setDeletingItemId(null)}
       />
     </div>
   );
@@ -1102,49 +1791,77 @@ export function CostingCalculator() {
   function backToList() { setView("list"); setEditingRecord(null); }
   async function handleSaved() { await fetchRecords(); backToList(); }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this quote? This cannot be undone.")) return;
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
+  const [isDeletingQuote, setIsDeletingQuote] = useState(false);
+
+  function handleDelete(id: string) {
+    setDeletingQuoteId(id);
+  }
+
+  async function handleConfirmDeleteQuote() {
+    if (!deletingQuoteId) return;
+    setIsDeletingQuote(true);
     try {
-      const res = await fetch(`/api/costing/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/costing/${deletingQuoteId}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       toast.success("Quote deleted");
       await fetchRecords();
     } catch { toast.error("Could not delete quote"); }
+    finally {
+      setIsDeletingQuote(false);
+      setDeletingQuoteId(null);
+    }
   }
 
   return (
-    <>
+    <div>
+      <PageHeader
+        title="Costing Calculator"
+        description="View saved quotes or create a new costing with material, cutting, bending, and GST."
+        action={
+          view === "list" ? (
+            <Button size="sm" onClick={openAdd}>
+              + Add Costing
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={backToList} className="gap-1.5">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to List
+            </Button>
+          )
+        }
+      />
+
       {viewRecord && (
         <ViewModal record={viewRecord} onClose={() => setViewRecord(null)} onEdit={() => openEdit(viewRecord)} />
       )}
 
       {view === "list" ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">Saved Quotes</p>
-            <Button size="sm" onClick={openAdd} className="gap-2">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Add Costing
-            </Button>
-          </div>
-          <Card className="overflow-hidden">
-            <SavedCostingList
-              records={records} loading={listLoading}
-              onView={setViewRecord} onEdit={openEdit}
-              onDelete={handleDelete} onAdd={openAdd} onRefresh={fetchRecords}
-            />
-          </Card>
-        </div>
+        <Card className="overflow-hidden">
+          <SavedCostingList
+            records={records} loading={listLoading}
+            onView={setViewRecord} onEdit={openEdit}
+            onDelete={handleDelete} onAdd={openAdd} onRefresh={fetchRecords}
+          />
+        </Card>
       ) : (
         <CostingForm
-          editingId={editingRecord?.id ?? null}
-          initialTitle={editingRecord?.title ?? ""}
+          editingRecord={editingRecord}
           onSaved={handleSaved}
           onCancel={backToList}
         />
       )}
-    </>
+
+      <ConfirmModal
+        isOpen={!!deletingQuoteId}
+        title="Delete Quote"
+        message="Are you sure you want to delete this quote? This cannot be undone."
+        isLoading={isDeletingQuote}
+        onConfirm={handleConfirmDeleteQuote}
+        onClose={() => setDeletingQuoteId(null)}
+      />
+    </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { formatDateTime } from "@/lib/utils";
 
@@ -42,6 +44,7 @@ const STATUS_OPTIONS = [
 ];
 
 export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
+  const router = useRouter();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [status, setStatus] = useState("NEW");
@@ -49,6 +52,8 @@ export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
   const [noteText, setNoteText] = useState("");
   const [saving, setSaving] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function loadInquiry() {
     const res = await fetch(`/api/inquiries/${inquiryId}`);
@@ -83,6 +88,20 @@ export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
       toast.error("Could not update inquiry");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/inquiries/${inquiryId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast.success("Inquiry removed");
+      router.push("/admin/inquiries");
+    } catch {
+      toast.error("Could not delete inquiry");
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   }
 
@@ -203,8 +222,28 @@ export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
           <Button onClick={handleUpdate} isLoading={saving}>
             Save Changes
           </Button>
+
+          <div className="border-t border-line-soft pt-4 mt-2">
+            <Button
+              variant="danger"
+              className="w-full"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete Inquiry
+            </Button>
+          </div>
         </div>
       </Card>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Delete Inquiry"
+        message={`Are you sure you want to delete inquiry from "${inquiry.name}"? This action cannot be undone.`}
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onClose={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
+
