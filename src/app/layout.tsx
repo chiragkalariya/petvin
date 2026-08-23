@@ -8,9 +8,28 @@ const plexSans = IBM_Plex_Sans({ subsets: ["latin"], variable: "--font-plex-sans
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-plex-mono", weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "Petvin Febtech — Precision Laser Cutting & CNC Bending",
+  metadataBase: new URL("https://petvinfebtech.com"),
+  title: {
+    default: "Petvin Febtech | Laser Cutting & Sheet Metal Fabrication in Ahmedabad",
+    template: "%s | Petvin Febtech",
+  },
   description:
-    "Petvin Febtech provides precision laser cutting and CNC press brake bending for automotive, furniture, electrical enclosure, and signage industries.",
+    "Petvin Febtech provides precision fiber laser cutting, CNC bending and custom sheet metal fabrication in Ahmedabad for MS, SS and aluminium. Prototype to bulk production.",
+  openGraph: {
+    title: "Petvin Febtech | Laser Cutting & Sheet Metal Fabrication in Ahmedabad",
+    description:
+      "Precision fiber laser cutting, CNC bending and custom sheet metal fabrication in Ahmedabad for MS, SS and aluminium.",
+    url: "https://petvinfebtech.com",
+    siteName: "Petvin Febtech",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Petvin Febtech | Laser Cutting & Sheet Metal Fabrication",
+    description:
+      "Precision fiber laser cutting, CNC bending and custom sheet metal fabrication in Ahmedabad for MS, SS and aluminium.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

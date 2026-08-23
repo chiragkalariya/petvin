@@ -3,7 +3,13 @@ import { Section, SectionHeading, Eyebrow } from "@/components/ui/Section";
 import { SpecPlate, SpecRow } from "@/components/ui/Card";
 
 export const metadata: Metadata = {
-  title: "About Us — Petvin Febtech",
+  title: "About Us | Petvin Febtech",
+  description: "Petvin Febtech is a sheet metal fabrication company based in Ahmedabad, Gujarat, India, providing fiber laser cutting, CNC bending and custom sheet metal manufacturing.",
+  openGraph: {
+    title: "About Us | Petvin Febtech",
+    description: "Petvin Febtech is a sheet metal fabrication company based in Ahmedabad, Gujarat, India, providing fiber laser cutting, CNC bending and custom sheet metal manufacturing.",
+    url: "https://petvinfebtech.com/about",
+  }
 };
 
 export default function AboutPage() {
@@ -17,9 +23,7 @@ export default function AboutPage() {
       <div className="grid gap-14 md:grid-cols-2">
         <div className="space-y-4 text-[15.5px] text-ink-dim">
           <p>
-            Petvin Febtech is a sheet metal fabrication shop. We don&apos;t outsource the two
-            operations that matter most — cutting and bending happen under one roof, on our own
-            equipment, so your drawing goes from file to finished part without changing hands.
+            Petvin Febtech is a sheet metal fabrication company based in Ahmedabad, Gujarat, India, providing fiber laser cutting, CNC bending and custom sheet metal manufacturing for prototype and production requirements.
           </p>
           <p>
             Our fiber laser handles clean, accurate cuts across a range of sheet thicknesses, and our
