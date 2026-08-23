@@ -9,10 +9,12 @@ export function Hero() {
       <div className="mx-auto grid max-w-6xl gap-14 px-6 md:grid-cols-[1.3fr_1fr] md:items-end">
         <div>
           <Eyebrow>Sheet Metal Fabrication</Eyebrow>
-          <h1 className="font-display text-5xl uppercase leading-[1.05] text-ink md:text-7xl">
-            Precision cut.
+          <h1 className="font-display text-4xl uppercase leading-[1.05] text-ink md:text-5xl lg:text-6xl">
+            Precision Laser Cutting &
             <br />
-            <span className="text-accent">Precisely bent.</span>
+            <span className="text-accent">Sheet Metal Fabrication</span>
+            <br />
+            in Ahmedabad
           </h1>
           <p className="mt-6 max-w-lg text-[17px] text-ink-dim">
             Petvin Febtech turns raw sheet metal into finished parts — fast, accurate, and built to

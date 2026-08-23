@@ -3,7 +3,13 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { PortfolioGrid } from "@/components/sections/PortfolioGrid";
 
 export const metadata: Metadata = {
-  title: "Our Work — Petvin Febtech",
+  title: "Our Work | Case Studies | Petvin Febtech",
+  description: "Explore our portfolio of precision laser cutting and CNC bending projects in Ahmedabad. Real examples of our custom sheet metal fabrication capabilities.",
+  openGraph: {
+    title: "Our Work | Case Studies | Petvin Febtech",
+    description: "Explore our portfolio of precision laser cutting and CNC bending projects in Ahmedabad.",
+    url: "https://petvinfebtech.com/our-work",
+  }
 };
 
 export default function OurWorkPage() {

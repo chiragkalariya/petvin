@@ -4,7 +4,13 @@ import { ContactForm } from "@/components/sections/ContactForm";
 import { SITE } from "@/lib/site-content";
 
 export const metadata: Metadata = {
-  title: "Contact Us — Petvin Febtech",
+  title: "Contact Us | Quote for Sheet Metal Fabrication | Petvin Febtech",
+  description: "Contact Petvin Febtech in Ahmedabad for a quotation on laser cutting, CNC bending, and custom sheet metal fabrication. Send your drawing today.",
+  openGraph: {
+    title: "Contact Us | Quote for Sheet Metal Fabrication | Petvin Febtech",
+    description: "Contact Petvin Febtech in Ahmedabad for a quotation on laser cutting, CNC bending, and custom sheet metal fabrication.",
+    url: "https://petvinfebtech.com/contact",
+  }
 };
 
 function InfoBlock({ label, value, href }: { label: string; value: string; href?: string }) {
