@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { ServiceSchema, BreadcrumbSchema } from "@/components/seo/Schema";
+import { ServiceSchema, BreadcrumbSchema, FAQSchema } from "@/components/seo/Schema";
 import { Section, SectionHeading } from "@/components/ui/Section";
 import Link from "next/link";
 
@@ -15,6 +15,25 @@ export const metadata: Metadata = {
   },
 };
 
+const FAQS = [
+  {
+    question: "What is CNC sheet metal bending?",
+    answer: "It is a manufacturing process where a CNC-controlled press brake is used to bend and form sheet metal into desired shapes with high precision and repeatability.",
+  },
+  {
+    question: "Can you bend custom brackets and panels?",
+    answer: "Yes, forming custom brackets, panels, and enclosures is our specialty.",
+  },
+  {
+    question: "Can you handle prototype quantities?",
+    answer: "Absolutely. We take on both low-volume prototype work and high-volume production batches.",
+  },
+  {
+    question: "What information is required for a bending quotation?",
+    answer: "Please provide a 2D drawing (DXF/DWG/PDF), 3D model if available, material type, thickness, and required quantities.",
+  },
+];
+
 export default function CNCBendingPage() {
   return (
     <>
@@ -29,6 +48,7 @@ export default function CNCBendingPage() {
         description="Precision CNC sheet metal bending service in Ahmedabad for custom brackets, panels, and enclosures."
         url="https://petvinfebtech.com/cnc-bending"
       />
+      <FAQSchema faqs={FAQS} />
 
       <Section alt className="pt-24 md:pt-32">
         <div className="max-w-4xl">

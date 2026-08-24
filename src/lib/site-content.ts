@@ -8,9 +8,12 @@ export const SITE = {
 };
 
 export const NAV_LINKS = [
-  { href: "/about", label: "About" },
-  { href: "/products", label: "Capabilities" },
+  { href: "/", label: "Home" },
+  { href: "/#about", label: "About Us" },
+  { href: "/#capabilities", label: "Capabilities" },
+  { href: "/#industries", label: "Industries" },
   { href: "/our-work", label: "Our Work" },
+  { href: "/#process", label: "Process" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -25,64 +28,125 @@ export const CAPABILITIES = [
   {
     num: "01",
     title: "Laser Cutting",
-    description:
-      "High-precision cutting on our 3 kW fiber laser — clean edges, tight tolerances, minimal material waste.",
+    description: "High precision 3kW fiber laser cutting for MS, SS, Aluminium & more.",
+    image: "/images/cap_laser_cutting.jpg",
+    link: "/laser-cutting",
   },
   {
     num: "02",
     title: "CNC Bending",
-    description:
-      "160-ton press brake for accurate, repeatable bends on brackets, panels, and enclosures of any complexity.",
+    description: "160 Ton CNC press brake for accurate & consistent bending.",
+    image: "/images/cap_cnc_bending.jpg",
+    link: "/cnc-bending",
   },
   {
     num: "03",
     title: "Custom Fabrication",
-    description:
-      "Send us a drawing or a sample part — we'll cut, bend, and finish it to spec, start to finish.",
+    description: "End-to-end fabrication solutions tailored to your requirements.",
+    image: "/images/cap_custom_fabrication.jpg",
+    link: "/custom-metal-fabrication",
   },
   {
     num: "04",
-    title: "Prototype & Bulk",
-    description:
-      "Same process whether you need one part to test a design or a thousand for production.",
+    title: "Prototype to Bulk",
+    description: "From prototype to high volume production — we deliver excellence.",
+    image: "/images/cap_prototype_bulk.jpg",
+    link: "/sheet-metal-fabrication",
   },
 ];
 
-export const INDUSTRIES = [
-  "Automotive",
-  "Furniture & Interiors",
-  "Electrical Enclosures",
-  "Signage & Display",
-  "HVAC & Ducting",
-  "Architecture & Railings",
+export const ABOUT_PILLARS = [
+  {
+    title: "Precision",
+    desc: "High accuracy in every detail",
+    icon: "Target",
+  },
+  {
+    title: "Quality",
+    desc: "Strict quality control at every stage",
+    icon: "ShieldCheck",
+  },
+  {
+    title: "Speed",
+    desc: "On-time delivery, every time",
+    icon: "Gauge",
+  },
+  {
+    title: "Reliability",
+    desc: "Trusted by industries across India",
+    icon: "Award",
+  },
 ];
 
 export const PROCESS_STEPS = [
   {
     num: "01",
-    title: "Inquiry & Drawing Review",
-    description: "Send your drawing, DXF, or sample. We review material, thickness, and quantity.",
+    title: "Inquiry",
+    description: "Send us your drawing or requirements",
+    icon: "MessageSquare",
   },
   {
     num: "02",
-    title: "Quote & Confirmation",
-    description: "We cost the job and send a clear quote — material, cutting, and bending broken out.",
+    title: "Quote",
+    description: "We review & provide the best quote",
+    icon: "FileSpreadsheet",
   },
   {
     num: "03",
     title: "Laser Cutting",
-    description: "Parts are cut on the fiber laser to exact dimensions.",
+    description: "Precision cutting with advanced fiber laser",
+    icon: "Zap",
   },
   {
     num: "04",
     title: "CNC Bending",
-    description: "Cut parts move straight to the press brake for final forming.",
+    description: "Accurate bending with CNC press brake",
+    icon: "Layers",
   },
   {
     num: "05",
-    title: "Quality Check & Dispatch",
-    description: "Every batch is checked against spec before it leaves the shop.",
+    title: "Quality Check",
+    description: "Strict quality inspection for perfect output",
+    icon: "ShieldCheck",
   },
+  {
+    num: "06",
+    title: "Dispatch",
+    description: "Safe packaging & on-time delivery",
+    icon: "Truck",
+  },
+];
+
+export const MACHINES = [
+  {
+    id: "laser",
+    title: "3 KW FIBER LASER CUTTER",
+    image: "/images/machine_fiber_laser.jpg",
+    specs: [
+      { label: "Power", value: "3 KW Power" },
+      { label: "Material", value: "MS / SS / AL" },
+      { label: "Capacity", value: "Up to 16mm" },
+    ],
+  },
+  {
+    id: "press-brake",
+    title: "160 TON CNC PRESS BRAKE",
+    image: "/images/machine_press_brake.jpg",
+    specs: [
+      { label: "Tonnage", value: "160 Ton" },
+      { label: "Length", value: "2500mm" },
+      { label: "Precision", value: "High Accuracy" },
+    ],
+  },
+];
+
+export const INDUSTRIES = [
+  { name: "Automotive", icon: "CarFront" },
+  { name: "Furniture & Interiors", icon: "Armchair" },
+  { name: "Electrical Enclosures", icon: "Cpu" },
+  { name: "HVAC", icon: "Wind" },
+  { name: "Architecture & Railings", icon: "Building2" },
+  { name: "Signage & Display", icon: "MonitorPlay" },
 ];
 
 // Portfolio categories and items now live in the database (PortfolioCategory /

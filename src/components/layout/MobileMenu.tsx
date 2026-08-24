@@ -60,9 +60,10 @@ export function MobileMenu() {
         <Link
           href="/contact"
           onClick={() => setOpen(false)}
-          className="mt-2 border border-accent px-5 py-3 text-center text-sm uppercase tracking-wider text-accent"
+          className="mt-4 flex items-center justify-center gap-2 bg-accent px-5 py-3 text-center text-sm font-semibold uppercase tracking-wider text-white hover:bg-accent-hover"
         >
-          Get a Quote
+          <span>Get a Quote</span>
+          <span>→</span>
         </Link>
       </div>
     </>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminSidebar } from "./AdminSidebar";
 
@@ -38,13 +40,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="flex h-screen flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line bg-bg-alt px-5 py-4 md:hidden">
-          <span className="font-display text-sm uppercase tracking-wide text-ink">Dashboard</span>
+        {/* Mobile top header with logo and bar icon */}
+        <div className="flex items-center justify-between border-b border-line bg-bg-alt px-5 py-3.5 md:hidden">
+          <Link href="/admin" className="flex items-center gap-2">
+            <img
+              src="/images/petvin_febtech_updated.svg"
+              alt="Petvin Febtech"
+              className="w-28 h-auto"
+            />
+          </Link>
           <button
             onClick={() => setOpen(true)}
-            className="border border-line px-3 py-1.5 text-xs uppercase tracking-wide text-ink-dim"
+            aria-label="Open Navigation Menu"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-bg text-ink-dim hover:border-accent hover:text-accent transition-colors"
           >
-            Menu
+            <Menu className="h-5 w-5" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 md:p-10">{children}</div>

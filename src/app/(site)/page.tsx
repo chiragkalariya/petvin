@@ -1,48 +1,74 @@
-import Link from "next/link";
 import { Hero } from "@/components/sections/Hero";
 import { CapabilitiesGrid } from "@/components/sections/CapabilitiesGrid";
+import { AboutSection } from "@/components/sections/AboutSection";
 import { ProcessSteps } from "@/components/sections/ProcessSteps";
+import { MachinesSection } from "@/components/sections/MachinesSection";
+import { FeaturedPortfolio } from "@/components/sections/FeaturedPortfolio";
 import { IndustriesChips } from "@/components/sections/IndustriesChips";
-import { Section, SectionHeading } from "@/components/ui/Section";
+import { CtaBanner } from "@/components/sections/CtaBanner";
 
 export default function HomePage() {
   return (
     <>
+      {/* 1. Hero */}
       <Hero />
 
-      <Section id="capabilities" alt>
-        <SectionHeading
-          eyebrow="What We Do"
-          title="Capabilities"
-          description="From a single custom bracket to a scheduled monthly run — here's what goes through our shop."
-        />
-        <CapabilitiesGrid />
-      </Section>
-
-      <Section id="industries">
-        <SectionHeading eyebrow="Who We Work With" title="Industries We Serve" />
-        <IndustriesChips />
-      </Section>
-
-      <Section id="process" alt>
-        <SectionHeading eyebrow="How We Work" title="From Drawing to Delivery" />
-        <ProcessSteps />
-      </Section>
-
-      <Section>
-        <div className="flex flex-col items-start gap-6 border border-line bg-bg-alt p-10 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h3 className="font-display text-2xl uppercase text-ink">Have a drawing ready?</h3>
-            <p className="mt-2 text-sm text-ink-dim">Send it over and we&apos;ll get back with a quote.</p>
+      {/* 2. Core Capabilities */}
+      <section id="capabilities" className="relative w-full py-24 bg-bg border-t border-line/50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+              WHAT WE DO
+            </span>
+            <h2 className="mt-2 font-display text-3xl font-bold uppercase tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Our Core Capabilities
+            </h2>
           </div>
-          <Link
-            href="/contact"
-            className="whitespace-nowrap bg-accent px-7 py-3.5 text-xs font-semibold uppercase tracking-wider text-bg hover:bg-accent-light"
-          >
-            Request a Quote
-          </Link>
+          <CapabilitiesGrid />
         </div>
-      </Section>
+      </section>
+
+      {/* 3. About Us */}
+      <AboutSection />
+
+      {/* 4. Our Process */}
+      <section id="process" className="relative w-full py-24 bg-bg border-t border-line/50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+              OUR PROCESS
+            </span>
+            <h2 className="mt-2 font-display text-3xl font-bold uppercase tracking-tight text-white sm:text-4xl lg:text-5xl">
+              From Drawing to Delivery
+            </h2>
+          </div>
+          <ProcessSteps />
+        </div>
+      </section>
+
+      {/* 5. Our Machines */}
+      <MachinesSection />
+
+      {/* 6. Featured Portfolio & Work */}
+      <FeaturedPortfolio />
+
+      {/* 7. Industries We Serve */}
+      <section id="industries" className="relative w-full py-24 bg-bg border-t border-line/50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+              INDUSTRIES WE SERVE
+            </span>
+            <h2 className="mt-2 font-display text-3xl font-bold uppercase tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Built For Every Industry
+            </h2>
+          </div>
+          <IndustriesChips />
+        </div>
+      </section>
+
+      {/* 7. CTA Banner */}
+      <CtaBanner />
     </>
   );
 }

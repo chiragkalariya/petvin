@@ -9,9 +9,11 @@ interface ConfirmModalProps {
   title?: string;
   message?: string;
   confirmText?: string;
+  confirmLabel?: string;
   cancelText?: string;
   variant?: "danger" | "outline" | "primary";
   isLoading?: boolean;
+  icon?: React.ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -20,14 +22,17 @@ export function ConfirmModal({
   isOpen,
   title = "Confirm Delete",
   message = "Are you sure you want to delete this item? This action cannot be undone.",
-  confirmText = "Delete",
+  confirmText,
+  confirmLabel,
   cancelText = "Cancel",
   variant = "danger",
   isLoading = false,
+  icon,
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const resolvedConfirmText = confirmText ?? confirmLabel ?? "Delete";
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,7 +62,7 @@ export function ConfirmModal({
       >
         <div className="flex items-start gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-red-500/30 bg-red-500/10 text-red-400">
-            <TrashIcon className="h-5 w-5" />
+            {icon || <TrashIcon className="h-5 w-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-display text-base uppercase text-ink tracking-wide">
@@ -86,7 +91,7 @@ export function ConfirmModal({
             isLoading={isLoading}
             onClick={onConfirm}
           >
-            {confirmText}
+            {resolvedConfirmText}
           </Button>
         </div>
       </div>
