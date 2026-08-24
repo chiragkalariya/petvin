@@ -143,17 +143,6 @@ export async function FeaturedPortfolio() {
             );
           })}
         </div>
-
-        {/* Bottom CTA Strip */}
-        <div className="mt-12 text-center">
-          <Link
-            href="/our-work"
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-8 py-3.5 font-display text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_25px_rgba(255,106,26,0.35)] transition-all hover:bg-accent-hover hover:shadow-[0_0_35px_rgba(255,106,26,0.55)]"
-          >
-            <span>Explore All 60+ Portfolio Items</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
       </div>
     </section>
   );
