@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { ServiceSchema, BreadcrumbSchema } from "@/components/seo/Schema";
+import { ServiceSchema, BreadcrumbSchema, FAQSchema } from "@/components/seo/Schema";
 import { Section, SectionHeading } from "@/components/ui/Section";
 import Link from "next/link";
 
@@ -15,6 +15,25 @@ export const metadata: Metadata = {
   },
 };
 
+const FAQS = [
+  {
+    question: "What is fiber laser cutting?",
+    answer: "Fiber laser cutting uses a high-powered laser to cut sheet metal with extreme precision, minimal heat distortion, and excellent edge quality compared to traditional methods.",
+  },
+  {
+    question: "What materials can Petvin Febtech laser cut?",
+    answer: "We process Mild Steel (MS), Stainless Steel (SS), and Aluminium using our 3 kW fiber laser cutting machine.",
+  },
+  {
+    question: "Can I send a DXF or DWG drawing?",
+    answer: "Yes, we accept standard 2D vector formats like DXF and DWG for quick programming and nesting.",
+  },
+  {
+    question: "Do you handle prototype and bulk production?",
+    answer: "Yes, our setup allows us to cater to both single-piece prototypes and scheduled bulk production runs.",
+  },
+];
+
 export default function LaserCuttingPage() {
   return (
     <>
@@ -29,6 +48,7 @@ export default function LaserCuttingPage() {
         description="Precision fiber laser cutting service in Ahmedabad for MS, SS, and Aluminium."
         url="https://petvinfebtech.com/laser-cutting"
       />
+      <FAQSchema faqs={FAQS} />
 
       <Section alt className="pt-24 md:pt-32">
         <div className="max-w-4xl">

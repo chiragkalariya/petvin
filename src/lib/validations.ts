@@ -75,16 +75,29 @@ export type CostingRecordValues = z.infer<typeof costingRecordSchema>;
 
 export const portfolioCategorySchema = z.object({
   name: z.string().min(2, "Category name is required"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional().default("ACTIVE"),
 });
 export type PortfolioCategoryValues = z.infer<typeof portfolioCategorySchema>;
 
 export const portfolioItemSchema = z.object({
   name: z.string().min(2, "Item name is required"),
-  material: z.string().optional(),
-  description: z.string().optional(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  slug: z.string().optional(),
   categoryId: z.string().min(1, "Choose a category"),
-  featured: z.boolean().optional(),
+  industry: z.string().min(1, "Industry is required"),
+  processes: z.string().min(1, "Process is required"),
+  materials: z.string().min(1, "Material is required"),
+  material: z.string().optional(),
+  applicationType: z.enum([
+    "Job Work",
+    "OEM Component",
+    "Standard Product",
+    "Custom Fabrication",
+  ]).default("Job Work"),
+  description: z.string().optional().or(z.literal("")),
+  imageUrl: z.string().optional().or(z.literal("")),
+  featured: z.boolean().optional().default(false),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional().default("ACTIVE"),
+  displayOrder: z.coerce.number().optional().default(0),
 });
 export type PortfolioItemValues = z.infer<typeof portfolioItemSchema>;
 

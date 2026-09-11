@@ -1,28 +1,39 @@
 import Link from "next/link";
-import { NAV_LINKS, SITE } from "@/lib/site-content";
+import { NAV_LINKS } from "@/lib/site-content";
 import { MobileMenu } from "./MobileMenu";
+import { ArrowRight } from "lucide-react";
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-line bg-bg">
-      <nav className="flex w-full items-center justify-between px-5 py-4 md:px-10">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/images/petvin_febtech_updated.svg" alt="Petvin Logo" className="w-28 md:w-32 h-auto" />
+    <header className="sticky top-0 z-50 w-full border-b border-line bg-bg/95 backdrop-blur-md">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+        <Link href="/" className="flex items-center gap-2 group">
+          <img
+            src="/images/petvin_febtech_updated.svg"
+            alt="Petvin Febtech"
+            className="w-32 md:w-36 h-auto transition-transform group-hover:scale-[1.02]"
+          />
         </Link>
 
-        <div className="hidden items-center gap-10 md:flex">
-          <div className="flex gap-8 text-sm tracking-wide text-ink-dim">
+        <div className="hidden items-center gap-8 lg:flex">
+          <div className="flex gap-7 text-[13px] font-medium tracking-wide text-ink-dim">
             {NAV_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="transition-colors hover:text-ink">
+              <Link
+                key={link.href}
+                href={link.href}
+                className="transition-colors hover:text-white"
+              >
                 {link.label}
               </Link>
             ))}
           </div>
+
           <Link
             href="/contact"
-            className="border border-accent px-5 py-2.5 text-xs uppercase tracking-wider text-accent transition-colors hover:bg-accent hover:text-bg"
+            className="inline-flex items-center gap-2 bg-accent px-5 py-2.5 text-[12px] font-semibold uppercase tracking-wider text-white transition-all duration-200 hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(255,106,26,0.4)]"
           >
-            Get a Quote
+            <span>GET A QUOTE</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 

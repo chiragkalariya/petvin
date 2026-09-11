@@ -1,17 +1,31 @@
 import React from "react";
+import { SITE } from "@/lib/site-content";
 
 export const OrganizationSchema = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": "https://petvinfebtech.com/#organization",
     name: "Petvin Febtech",
     url: "https://petvinfebtech.com",
-    logo: "https://petvinfebtech.com/images/logo.png",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://petvinfebtech.com/images/petvin_febtech_updated.svg",
+    },
+    image: "https://petvinfebtech.com/images/hero_laser_cutting.jpg",
     description:
       "Petvin Febtech provides precision fiber laser cutting, CNC bending and custom sheet metal fabrication in Ahmedabad for prototype and production requirements.",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: SITE.address,
+      addressLocality: "Ahmedabad",
+      addressRegion: "Gujarat",
+      postalCode: "382430",
+      addressCountry: "IN",
+    },
     contactPoint: {
       "@type": "ContactPoint",
-      telephone: "+91-0000000000", // Placeholder, requires real number
+      telephone: SITE.phone,
       contactType: "customer service",
       areaServed: "IN",
       availableLanguage: ["en", "hi", "gu"],
@@ -30,21 +44,42 @@ export const LocalBusinessSchema = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
+    "@id": "https://petvinfebtech.com/#localbusiness",
     name: "Petvin Febtech",
-    image: "https://petvinfebtech.com/images/hero-bg.jpg", // Placeholder
+    image: "https://petvinfebtech.com/images/hero_laser_cutting.jpg",
     url: "https://petvinfebtech.com",
-    telephone: "+91-0000000000", // Placeholder
+    hasMap: SITE.mapUrl,
+    telephone: SITE.phone,
+    email: SITE.email,
+    priceRange: "₹₹",
     address: {
       "@type": "PostalAddress",
+      streetAddress: SITE.address,
       addressLocality: "Ahmedabad",
       addressRegion: "Gujarat",
+      postalCode: "382430",
       addressCountry: "IN",
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: 23.0225, // Ahmedabad center placeholder
+      latitude: 23.0225,
       longitude: 72.5714,
     },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ],
+        opens: "09:00",
+        closes: "19:00",
+      },
+    ],
     areaServed: ["Ahmedabad", "Gujarat", "India"],
   };
 
@@ -72,6 +107,16 @@ export const ServiceSchema = ({
     provider: {
       "@type": "LocalBusiness",
       name: "Petvin Febtech",
+      url: "https://petvinfebtech.com",
+      telephone: SITE.phone,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: SITE.address,
+        addressLocality: "Ahmedabad",
+        addressRegion: "Gujarat",
+        postalCode: "382430",
+        addressCountry: "IN",
+      },
     },
     areaServed: {
       "@type": "City",
@@ -79,6 +124,32 @@ export const ServiceSchema = ({
     },
     description: description,
     url: url,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+};
+
+export const FAQSchema = ({
+  faqs,
+}: {
+  faqs: { question: string; answer: string }[];
+}) => {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
   };
 
   return (

@@ -18,8 +18,14 @@ html {
 }
 
 body {
-  background-color: #1b1e22;
-  color: #edeef0;
+  background-color: #0D0F12;
+  color: #FFFFFF;
+  overflow-x: hidden;
+}
+
+::selection {
+  background-color: #FF6A1A;
+  color: #0D0F12;
 }
 
 /* Custom Scrollbar UI matching website theme */
@@ -29,27 +35,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1b1e22;
+  background: #0D0F12;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #383d44;
+  background: #252932;
   border-radius: 4px;
-  border: 1px solid #22262b;
+  border: 1px solid #13161B;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff6a1a;
+  background: #FF6A1A;
 }
 
 ::-webkit-scrollbar-corner {
-  background: #1b1e22;
+  background: #0D0F12;
 }
 
 /* Firefox scrollbar styling */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #383d44 #1b1e22;
+  scrollbar-color: #252932 #0D0F12;
 }
 
 /* Hide number input spinners globally */
@@ -62,5 +68,17 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+@layer utilities {
+  .glow-orange {
+    box-shadow: 0 0 25px rgba(255, 106, 26, 0.25);
+  }
+  .glow-orange-sm {
+    box-shadow: 0 0 15px rgba(255, 106, 26, 0.2);
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(255, 106, 26, 0.4);
+  }
 }
 

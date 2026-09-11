@@ -6,24 +6,30 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          DEFAULT: "#1B1E22",
-          alt: "#22262B",
-          light: "#2E3339",
+          DEFAULT: "#0D0F12",
+          alt: "#13161B",
+          card: "#171A21",
+          light: "#1E222B",
+          surface: "#111418",
         },
         ink: {
-          DEFAULT: "#EDEEF0",
-          dim: "#9AA0A6",
-          dimmer: "#6A6F76",
+          DEFAULT: "#FFFFFF",
+          muted: "#E5E7EB",
+          dim: "#9CA3AF",
+          dimmer: "#6B7280",
         },
         accent: {
           DEFAULT: "#FF6A1A",
-          dim: "#C6551A",
-          light: "#FF7F3D",
+          hover: "#FF5500",
+          dim: "#D4520B",
+          light: "#FF8038",
+          glow: "rgba(255, 106, 26, 0.25)",
         },
-        steel: "#7FA6C9",
+        steel: "#8BA2B8",
         line: {
-          DEFAULT: "#383D44",
-          soft: "#2C3036",
+          DEFAULT: "#252932",
+          soft: "#1C1F26",
+          bright: "#353A47",
         },
       },
       fontFamily: {

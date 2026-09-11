@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ProspectCompanyForm } from "@/components/admin/ProspectCompanyForm";
@@ -72,6 +73,11 @@ export function ProspectDetailModal({
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchProspect = useCallback(() => {
     setLoading(true);
@@ -121,8 +127,13 @@ export function ProspectDetailModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-8">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-8"
+    >
       <div
         className="relative w-full max-w-3xl border border-line bg-bg shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -389,6 +400,7 @@ export function ProspectDetailModal({
           onClose={() => setDeletingVisitId(null)}
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

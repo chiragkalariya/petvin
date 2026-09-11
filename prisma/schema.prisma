@@ -158,28 +158,41 @@ model PortfolioCategory {
   id        String          @id @default(cuid())
   name      String          @unique
   slug      String          @unique
+  status    String          @default("ACTIVE")
   items     PortfolioItem[]
   createdAt DateTime        @default(now())
 
+  @@index([status])
   @@map("portfolio_categories")
 }
 
 model PortfolioItem {
-  id          String            @id @default(cuid())
-  name        String
-  material    String?
-  description String?
-  imageUrl    String?
+  id              String            @id @default(cuid())
+  name            String
+  slug            String?           @unique
+  material        String?
+  materials       String?
+  description     String?
+  imageUrl        String?
 
-  category    PortfolioCategory @relation(fields: [categoryId], references: [id])
-  categoryId  String
+  category        PortfolioCategory @relation(fields: [categoryId], references: [id])
+  categoryId      String
 
-  featured    Boolean           @default(false)
+  industry        String?
+  processes       String?
+  applicationType String            @default("Job Work")
+  featured        Boolean           @default(false)
+  status          String            @default("ACTIVE")
+  displayOrder    Int               @default(0)
 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([categoryId])
+  @@index([slug])
+  @@index([status])
+  @@index([featured])
+  @@index([displayOrder])
   @@map("portfolio_items")
 }
 

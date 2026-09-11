@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await requireAdmin();
 
     const body = await req.json();
-    const parsed = portfolioCategorySchema.safeParse(body);
+    const parsed = portfolioCategorySchema.partial().safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -18,10 +18,35 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       );
     }
 
+    const data = parsed.data;
+    const updateData: any = {};
+
+    if (data.name) {
+      updateData.name = data.name;
+      updateData.slug = slugify(data.name);
+    }
+
+    if (data.status) {
+      updateData.status = data.status;
+    }
+
     const category = await prisma.portfolioCategory.update({
       where: { id: params.id },
-      data: { name: parsed.data.name, slug: slugify(parsed.data.name) },
+      data: updateData,
     });
+
+    // When disabling a category, disable all its portfolio items too
+    if (data.status === "INACTIVE") {
+      await prisma.portfolioItem.updateMany({
+        where: { categoryId: params.id },
+        data: { status: "INACTIVE" },
+      });
+    } else if (data.status === "ACTIVE" && body.activateItems) {
+      await prisma.portfolioItem.updateMany({
+        where: { categoryId: params.id },
+        data: { status: "ACTIVE" },
+      });
+    }
 
     return NextResponse.json({ category });
   } catch (error) {

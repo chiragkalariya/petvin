@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState } from "@/components/ui/Card";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Modal } from "@/components/ui/Modal";
 import { TrashIcon, PencilIcon } from "@/components/ui/Icons";
 import { PageHeader } from "@/components/admin/PageHeader";
 
@@ -173,64 +174,57 @@ export function MachineManager() {
       )}
 
       {/* Add / Edit Machine Modal */}
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
+          <h3 className="font-display text-base uppercase text-ink tracking-wide">
+            {editingMachine ? "Edit Machine" : "Add Machine"}
+          </h3>
+          <button
+            onClick={() => setShowModal(false)}
+            className="text-ink-dimmer hover:text-ink transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
-              <h3 className="font-display text-base uppercase text-ink tracking-wide">
-                {editingMachine ? "Edit Machine" : "Add Machine"}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-ink-dimmer hover:text-ink transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveMachine} className="flex flex-col gap-4">
-              <Input
-                label="Machine Name *"
-                value={machineName}
-                onChange={(e) => setMachineName(e.target.value)}
-                placeholder="e.g. Fiber Laser 3KW, 160 Ton CNC"
-                autoFocus
-                required
-              />
-              <Select
-                label="Machine Type *"
-                value={machineType}
-                onChange={(e) => setMachineType(e.target.value as "CUTTING" | "BENDING")}
-                options={[
-                  { value: "CUTTING", label: "Laser Cutting" },
-                  { value: "BENDING", label: "Bending" },
-                ]}
-              />
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" isLoading={saving}>
-                  {editingMachine ? "Update Machine" : "Save Machine"}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      )}
+
+        <form onSubmit={handleSaveMachine} className="flex flex-col gap-4">
+          <Input
+            label="Machine Name *"
+            value={machineName}
+            onChange={(e) => setMachineName(e.target.value)}
+            placeholder="e.g. Fiber Laser 3KW, 160 Ton CNC"
+            required
+          />
+          <Select
+            label="Machine Type *"
+            value={machineType}
+            onChange={(e) => setMachineType(e.target.value as "CUTTING" | "BENDING")}
+            options={[
+              { value: "CUTTING", label: "Laser Cutting" },
+              { value: "BENDING", label: "Bending" },
+            ]}
+          />
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" isLoading={saving}>
+              {editingMachine ? "Update Machine" : "Save Machine"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

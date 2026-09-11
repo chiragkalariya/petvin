@@ -4,15 +4,33 @@ import { requireAdmin } from "@/lib/session";
 import { portfolioCategorySchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 
-// Public -- the "Our Work" page needs this with no login required.
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = req.nextUrl;
+    const includeAll = searchParams.get("all") === "true";
+    const statusParam = searchParams.get("status");
+
+    const where: any = {};
+    if (!includeAll) {
+      where.status = statusParam ? statusParam : "ACTIVE";
+    }
+
     const categories = await prisma.portfolioCategory.findMany({
+      where,
       orderBy: { name: "asc" },
-      include: { _count: { select: { items: true } } },
+      include: {
+        _count: {
+          select: {
+            items: {
+              where: { status: "ACTIVE" },
+            },
+          },
+        },
+      },
     });
+
     return NextResponse.json({ categories });
   } catch (error) {
     console.error("List categories error:", error);
@@ -42,7 +60,11 @@ export async function POST(req: NextRequest) {
     }
 
     const category = await prisma.portfolioCategory.create({
-      data: { name: parsed.data.name, slug },
+      data: {
+        name: parsed.data.name,
+        slug,
+        status: parsed.data.status ?? "ACTIVE",
+      },
     });
 
     return NextResponse.json({ category }, { status: 201 });
@@ -57,4 +79,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
-

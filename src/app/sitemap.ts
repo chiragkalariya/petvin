@@ -1,9 +1,10 @@
 import { MetadataRoute } from "next";
+import { prisma } from "@/lib/prisma";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://petvinfebtech.com";
 
-  return [
+  const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -26,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/our-work`,
       lastModified: new Date(),
       changeFrequency: "weekly",
-      priority: 0.8,
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/laser-cutting`,
@@ -65,4 +66,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
   ];
+
+  try {
+    const portfolioItems = await prisma.portfolioItem.findMany({
+      where: {
+        status: "ACTIVE",
+        category: { status: "ACTIVE" },
+      },
+      select: { slug: true, updatedAt: true },
+    });
+
+    const portfolioRoutes: MetadataRoute.Sitemap = portfolioItems
+      .filter((item) => item.slug)
+      .map((item) => ({
+        url: `${baseUrl}/our-work/${item.slug}`,
+        lastModified: item.updatedAt,
+        changeFrequency: "monthly",
+        priority: 0.85,
+      }));
+
+    return [...staticRoutes, ...portfolioRoutes];
+  } catch {
+    return staticRoutes;
+  }
 }

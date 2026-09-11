@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { TrashIcon } from "@/components/ui/Icons";
 
@@ -9,9 +10,11 @@ interface ConfirmModalProps {
   title?: string;
   message?: string;
   confirmText?: string;
+  confirmLabel?: string;
   cancelText?: string;
   variant?: "danger" | "outline" | "primary";
   isLoading?: boolean;
+  icon?: React.ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -20,14 +23,22 @@ export function ConfirmModal({
   isOpen,
   title = "Confirm Delete",
   message = "Are you sure you want to delete this item? This action cannot be undone.",
-  confirmText = "Delete",
+  confirmText,
+  confirmLabel,
   cancelText = "Cancel",
   variant = "danger",
   isLoading = false,
+  icon,
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const resolvedConfirmText = confirmText ?? confirmLabel ?? "Delete";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,9 +50,9 @@ export function ConfirmModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isLoading, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       onClick={(e) => {
@@ -49,7 +60,7 @@ export function ConfirmModal({
           onClose();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
       <div
         className="relative w-full max-w-md border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200"
@@ -57,7 +68,7 @@ export function ConfirmModal({
       >
         <div className="flex items-start gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-red-500/30 bg-red-500/10 text-red-400">
-            <TrashIcon className="h-5 w-5" />
+            {icon || <TrashIcon className="h-5 w-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-display text-base uppercase text-ink tracking-wide">
@@ -86,10 +97,11 @@ export function ConfirmModal({
             isLoading={isLoading}
             onClick={onConfirm}
           >
-            {confirmText}
+            {resolvedConfirmText}
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

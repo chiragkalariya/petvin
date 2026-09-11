@@ -1,0 +1,88 @@
+{
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "September 2026",
+    "description": "At Petvin Febtech, we respect your privacy and are committed to protecting any personal data, project details, and proprietary CAD drawings you share with us.",
+    "sections": [
+      {
+        "heading": "1. Information We Collect",
+        "content": "When you use our website, request a quote, or contact us for metal fabrication services, we may collect the following information:",
+        "points": [
+          "Contact details such as your name, email address, phone number, and company name.",
+          "Engineering files, specifications, and drawings (such as DXF, DWG, STEP, PDF, or images) uploaded for quotation and fabrication purposes.",
+          "Technical usage data such as IP address, browser type, and device information collected automatically for site functionality and security."
+        ]
+      },
+      {
+        "heading": "2. How We Use Your Information",
+        "content": "The information we collect is strictly used for legitimate business and manufacturing purposes, including:",
+        "points": [
+          "Evaluating drawings, preparing accurate quotations, and communicating technical project details.",
+          "Executing laser cutting, CNC bending, and sheet metal fabrication orders.",
+          "Responding to inquiries, customer support requests, and sending order status updates.",
+          "Improving our website experience, services, and operational reliability."
+        ]
+      },
+      {
+        "heading": "3. Protection of Proprietary CAD & Design Files",
+        "content": "We treat all drawings, CAD files, specifications, and proprietary part designs shared with Petvin Febtech with strict confidentiality. Your engineering drawings will never be published, shared with unauthorized third parties, or used for any purpose other than fulfilling your inquiry or manufacturing order without your prior written consent."
+      },
+      {
+        "heading": "4. Information Sharing & Third Parties",
+        "content": "Petvin Febtech does not sell, trade, or rent your personal information to third parties. We may only share data with trusted service providers (such as hosting and communication tools) strictly necessary for operating our website and fulfilling orders, or when required by legal authorities."
+      },
+      {
+        "heading": "5. Data Security",
+        "content": "We implement industry-standard security measures and procedures to safeguard your personal data and files against unauthorized access, alteration, disclosure, or destruction."
+      },
+      {
+        "heading": "6. Your Rights & Contact Information",
+        "content": "You have the right to request access to, correction of, or deletion of your personal data stored with us. If you have any questions regarding this Privacy Policy, please contact us at petvinfebtech@gmail.com or +91 7600652814."
+      }
+    ]
+  },
+  "termsAndConditions": {
+    "title": "Terms & Conditions",
+    "lastUpdated": "September 2026",
+    "description": "These Terms & Conditions govern your use of the Petvin Febtech website and the quotation and sheet metal fabrication services we provide.",
+    "sections": [
+      {
+        "heading": "1. Quotations & Pricing",
+        "content": "All quotations provided by Petvin Febtech are estimates based on the supplied engineering drawings, material specifications, tolerances, and quantities.",
+        "points": [
+          "Quotations are generally valid for 15 calendar days from the date of issue unless specified otherwise.",
+          "Prices are subject to revision if raw material market prices fluctuate significantly or if modifications are made to the initial drawings/CAD models.",
+          "Taxes (GST), packaging, and freight charges will be billed as applicable unless explicitly stated otherwise."
+        ]
+      },
+      {
+        "heading": "2. Manufacturing Tolerances & Inspection",
+        "content": "Parts are manufactured according to standard sheet metal fabrication and fiber laser cutting tolerances (typically ±0.05 mm for laser cutting and standard press brake bending tolerances) unless specific tighter tolerances are agreed upon in writing prior to production."
+      },
+      {
+        "heading": "3. Intellectual Property & Confidentiality",
+        "content": "Customers retain 100% ownership and intellectual property rights to their drawings, models, and custom designs. Petvin Febtech agrees to maintain confidentiality regarding all proprietary customer technical data."
+      },
+      {
+        "heading": "4. Order Confirmation & Payment Terms",
+        "content": "Orders are confirmed upon receipt of a formal purchase order (PO) or written approval along with the agreed advance payment. Standard payment terms require advance deposit for raw materials and balance payment prior to dispatch, unless mutually agreed otherwise in writing."
+      },
+      {
+        "heading": "5. Delivery & Lead Times",
+        "content": "Estimated dispatch and delivery timelines commence after receipt of approved drawings, raw materials, and advance payment. While we strive to meet all agreed turnaround times, Petvin Febtech is not liable for delays caused by external logistics, raw material supply shortages, power outages, or force majeure events."
+      },
+      {
+        "heading": "6. Quality Claims & Inspection Period",
+        "content": "Any claims regarding manufacturing defects, quantity discrepancies, or dimensional deviations must be submitted in writing within 7 days of receiving the shipment, along with inspection reports or supporting photos."
+      },
+      {
+        "heading": "7. Limitation of Liability",
+        "content": "Petvin Febtech shall not be liable for any indirect, incidental, or consequential damages arising out of the use of manufactured parts. Our total liability for any claim shall not exceed the invoice value of the affected order."
+      },
+      {
+        "heading": "8. Governing Law & Jurisdiction",
+        "content": "These Terms and Conditions shall be governed by and construed in accordance with the laws of India. Any disputes arising out of or related to our services shall be subject to the exclusive jurisdiction of the courts in Ahmedabad, Gujarat."
+      }
+    ]
+  }
+}

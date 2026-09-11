@@ -2,8 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { portfolioItemSchema } from "@/lib/validations";
+import { slugify } from "@/lib/utils";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const item = await prisma.portfolioItem.findFirst({
+      where: {
+        OR: [{ id: params.id }, { slug: params.id }],
+      },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    });
+
+    if (!item) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ item });
+  } catch (error) {
+    console.error("Get portfolio item error:", error);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     await requireUser();
 
@@ -19,15 +52,38 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const data = parsed.data;
 
+    let slugUpdate: string | undefined = undefined;
+    if (data.slug) {
+      slugUpdate = slugify(data.slug);
+    } else if (data.name) {
+      const baseSlug = slugify(data.name);
+      let slug = baseSlug;
+      let counter = 1;
+      while (true) {
+        const existing = await prisma.portfolioItem.findUnique({ where: { slug } });
+        if (!existing || existing.id === params.id) break;
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      slugUpdate = slug;
+    }
+
     const item = await prisma.portfolioItem.update({
       where: { id: params.id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.material !== undefined && { material: data.material || null }),
+        ...(slugUpdate !== undefined && { slug: slugUpdate }),
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+        ...(data.industry !== undefined && { industry: data.industry }),
+        ...(data.processes !== undefined && { processes: data.processes }),
+        ...(data.materials !== undefined && { materials: data.materials }),
+        ...(data.material !== undefined && { material: data.material }),
+        ...(data.applicationType !== undefined && { applicationType: data.applicationType }),
         ...(data.description !== undefined && { description: data.description || null }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
-        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
         ...(data.featured !== undefined && { featured: data.featured }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.displayOrder !== undefined && { displayOrder: data.displayOrder }),
       },
       include: { category: { select: { id: true, name: true, slug: true } } },
     });
@@ -42,7 +98,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     await requireUser();
     await prisma.portfolioItem.delete({ where: { id: params.id } });
