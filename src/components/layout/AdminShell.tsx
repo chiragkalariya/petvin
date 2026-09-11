@@ -15,10 +15,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    // Lock viewport scroll so modals and inputs never cause the admin layout to shift
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    window.scrollTo(0, 0);
+
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-bg">
+    <div className="flex h-screen w-full overflow-hidden bg-bg">
       {/* Desktop sidebar */}
-      <div className="hidden md:block">
+      <div className="hidden md:block h-full shrink-0">
         <AdminSidebar />
       </div>
 
@@ -39,7 +51,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <AdminSidebar />
       </div>
 
-      <div className="flex h-screen flex-1 flex-col overflow-hidden">
+      <div className="flex h-full flex-1 flex-col overflow-hidden">
         {/* Mobile top header with logo and bar icon */}
         <div className="flex items-center justify-between border-b border-line bg-bg-alt px-5 py-3.5 md:hidden">
           <Link href="/admin" className="flex items-center gap-2">

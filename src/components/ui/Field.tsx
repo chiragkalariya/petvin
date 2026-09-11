@@ -1,4 +1,13 @@
-import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef, ReactNode } from "react";
+import {
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+  forwardRef,
+  ReactNode,
+  useRef,
+  useEffect,
+  useImperativeHandle,
+} from "react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -36,23 +45,29 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, id, className, icon, ...props }, ref) => (
-    <FieldWrapper label={label} htmlFor={id} error={error} hint={hint}>
-      <div className="relative flex items-center group">
-        {icon && (
-          <div className="absolute left-3.5 text-ink-dimmer transition-colors group-focus-within:text-accent">
-            {icon}
-          </div>
-        )}
-        <input
-          ref={ref}
-          id={id}
-          className={cn(fieldBase, icon && "pl-10", error && "border-accent", className)}
-          {...props}
-        />
-      </div>
-    </FieldWrapper>
-  )
+  ({ label, error, hint, id, className, icon, autoFocus, ...props }, ref) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+
+    // Don't auto-scroll or force focus on mount
+    return (
+      <FieldWrapper label={label} htmlFor={id} error={error} hint={hint}>
+        <div className="relative flex items-center group">
+          {icon && (
+            <div className="absolute left-3.5 text-ink-dimmer transition-colors group-focus-within:text-accent">
+              {icon}
+            </div>
+          )}
+          <input
+            ref={inputRef}
+            id={id}
+            className={cn(fieldBase, icon && "pl-10", error && "border-accent", className)}
+            {...props}
+          />
+        </div>
+      </FieldWrapper>
+    );
+  }
 );
 Input.displayName = "Input";
 

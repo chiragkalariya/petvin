@@ -3,15 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn, slugify } from "@/lib/utils";
-import {
-  ArrowRight,
-  Layers,
-  Sparkles,
-  ArrowUpRight,
-  CheckCircle2,
-  FileText,
-  Filter,
-} from "lucide-react";
+import { Sparkles, Layers, FileText } from "lucide-react";
 
 interface Category {
   id: string;
@@ -49,7 +41,6 @@ export function PortfolioGrid() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<PortfolioItemData[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [activeIndustry, setActiveIndustry] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,24 +65,9 @@ export function PortfolioGrid() {
       });
   }, []);
 
-  // Compute available industries from items
-  const availableIndustries = useMemo(() => {
-    const set = new Set<string>();
-    items.forEach((item) => {
-      if (item.industry) {
-        item.industry.split(",").forEach((ind) => {
-          const trimmed = ind.trim();
-          if (trimmed) set.add(trimmed);
-        });
-      }
-    });
-    return Array.from(set);
-  }, [items]);
-
-  // Filter items by category and industry
+  // Filter items by category
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Category check
       if (activeCategory !== "all") {
         if (
           item.category?.slug !== activeCategory &&
@@ -100,20 +76,9 @@ export function PortfolioGrid() {
           return false;
         }
       }
-
-      // Industry check
-      if (activeIndustry !== "all") {
-        if (
-          !item.industry ||
-          !item.industry.toLowerCase().includes(activeIndustry.toLowerCase())
-        ) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [items, activeCategory, activeIndustry]);
+  }, [items, activeCategory]);
 
   return (
     <div className="w-full">
@@ -147,7 +112,7 @@ export function PortfolioGrid() {
       </div>
 
       {/* Category Navigation Tabs */}
-      <div className="space-y-4 mb-10">
+      <div className="mb-10">
         <div className="flex flex-wrap items-center gap-2">
           {[{ id: "all", name: "All Work", slug: "all" }, ...categories].map(
             (cat) => {
@@ -171,43 +136,6 @@ export function PortfolioGrid() {
             }
           )}
         </div>
-
-        {/* Secondary Industry Filter Strip */}
-        {availableIndustries.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line/40">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer flex items-center gap-1 mr-1">
-              <Filter className="h-3 w-3 text-accent" /> Industry:
-            </span>
-            <button
-              onClick={() => setActiveIndustry("all")}
-              className={cn(
-                "rounded-md px-3 py-1 font-mono text-[11px] transition-colors",
-                activeIndustry === "all"
-                  ? "bg-white/10 text-white font-semibold border border-white/20"
-                  : "text-ink-dim hover:text-white"
-              )}
-            >
-              All Industries
-            </button>
-            {availableIndustries.map((ind) => {
-              const isActive = activeIndustry === ind;
-              return (
-                <button
-                  key={ind}
-                  onClick={() => setActiveIndustry(ind)}
-                  className={cn(
-                    "rounded-md px-3 py-1 font-mono text-[11px] transition-colors",
-                    isActive
-                      ? "bg-accent/20 text-accent font-semibold border border-accent/40"
-                      : "text-ink-dim hover:text-white"
-                  )}
-                >
-                  {ind}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Grid of Portfolio Cards */}
@@ -231,7 +159,7 @@ export function PortfolioGrid() {
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-bg-card/40 py-24 text-center">
           <Layers className="h-12 w-12 text-ink-dimmer mb-3" />
           <h3 className="font-display text-lg font-bold uppercase text-white">
-            No manufactured items in this filter
+            No manufactured items in this category
           </h3>
           <p className="mt-1 text-sm text-ink-dim max-w-sm">
             We manufacture a wide range of custom components. Send us your CAD or PDF drawing for an immediate job-work quote.
@@ -240,11 +168,10 @@ export function PortfolioGrid() {
             <button
               onClick={() => {
                 setActiveCategory("all");
-                setActiveIndustry("all");
               }}
               className="border border-line bg-bg-card px-4 py-2 text-xs font-bold uppercase tracking-wider text-ink hover:text-white transition-colors rounded"
             >
-              Reset Filters
+              Reset Category
             </button>
             <Link
               href="/contact"
@@ -259,8 +186,6 @@ export function PortfolioGrid() {
           {filteredItems.map((item) => {
             const itemSlug = item.slug || slugify(item.name);
             const imgSrc = getImageSrc(item.imageUrl);
-            const appType = item.applicationType || "Job Work";
-            const isJobWork = appType === "Job Work";
 
             return (
               <Link
@@ -286,60 +211,30 @@ export function PortfolioGrid() {
                       {item.category?.name || "Manufacturing"}
                     </span>
                   </div>
-
-                  {/* Top-right Application Type Badge (Highlighted for Job Work) */}
-                  <div className="absolute right-3 top-3 z-10">
-                    <span
-                      className={`rounded-md px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${
-                        isJobWork
-                          ? "bg-accent/90 text-white border-accent shadow-[0_0_12px_rgba(255,106,26,0.4)]"
-                          : "bg-bg/90 text-white border-white/20"
-                      }`}
-                    >
-                      {appType}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Card Body */}
                 <div className="flex flex-1 flex-col justify-between p-6">
                   <div>
-                    {/* Industry */}
-                    {item.industry && (
-                      <span className="font-mono text-[11px] uppercase tracking-wider text-accent block">
-                        {item.industry}
-                      </span>
-                    )}
+                    {/* Category */}
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-accent block">
+                      {item.category?.name}
+                    </span>
 
                     {/* Title */}
                     <h3 className="mt-1 font-display text-lg font-bold uppercase tracking-wide text-white transition-colors group-hover:text-accent line-clamp-1">
                       {item.name}
                     </h3>
 
-                    {/* Process & Material Specs */}
-                    <div className="mt-3 space-y-1.5 border-t border-line/50 pt-3">
-                      {item.processes && (
-                        <div className="flex items-center gap-2 text-xs text-ink-dim">
-                          <span className="font-mono text-[10px] uppercase text-ink-dimmer shrink-0">
-                            Process:
-                          </span>
-                          <span className="font-medium text-white truncate">
-                            {item.processes}
-                          </span>
-                        </div>
-                      )}
-
-                      {(item.materials || item.material) && (
-                        <div className="flex items-center gap-2 text-xs text-ink-dim">
-                          <span className="font-mono text-[10px] uppercase text-ink-dimmer shrink-0">
-                            Material:
-                          </span>
-                          <span className="font-medium text-ink-dim truncate">
-                            {item.materials || item.material}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    {/* Material Spec */}
+                    {(item.materials || item.material) && (
+                      <div className="mt-3 flex items-center gap-2 text-xs text-ink-dim border-t border-line/50 pt-3">
+                        <Layers className="h-3.5 w-3.5 text-accent shrink-0" />
+                        <span className="font-medium text-ink-dim truncate">
+                          {item.materials || item.material}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Description */}
                     {item.description && (
@@ -347,18 +242,6 @@ export function PortfolioGrid() {
                         {item.description}
                       </p>
                     )}
-                  </div>
-
-                  {/* Card Bottom CTA Link */}
-                  <div className="mt-5 flex items-center justify-between border-t border-line/40 pt-4">
-                    <span className="inline-flex items-center gap-1.5 font-display text-xs font-bold uppercase tracking-wider text-accent transition-transform group-hover:translate-x-1">
-                      <span>View Details</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
-
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-bg-light/40 text-ink-dim transition-all duration-200 group-hover:border-accent group-hover:bg-accent group-hover:text-white">
-                      <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </span>
                   </div>
                 </div>
 

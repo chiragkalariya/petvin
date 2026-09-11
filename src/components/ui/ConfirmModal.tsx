@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { TrashIcon } from "@/components/ui/Icons";
 
@@ -33,6 +34,11 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const resolvedConfirmText = confirmText ?? confirmLabel ?? "Delete";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,9 +50,9 @@ export function ConfirmModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isLoading, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       onClick={(e) => {
@@ -54,7 +60,7 @@ export function ConfirmModal({
           onClose();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
       <div
         className="relative w-full max-w-md border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200"
@@ -95,6 +101,7 @@ export function ConfirmModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

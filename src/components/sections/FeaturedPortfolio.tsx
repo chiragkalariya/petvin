@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { ArrowRight, ArrowUpRight, Sparkles, Layers, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, Layers } from "lucide-react";
 import { slugify } from "@/lib/utils";
 
 function getImageSrc(url: string | null) {
@@ -93,18 +93,6 @@ export async function FeaturedPortfolio() {
                       {item.category.name}
                     </span>
                   </div>
-
-                  <div className="absolute right-2.5 top-2.5 z-10">
-                    <span
-                      className={`rounded px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-md border ${
-                        isJobWork
-                          ? "bg-accent/90 text-white border-accent"
-                          : "bg-bg/90 text-white border-white/20"
-                      }`}
-                    >
-                      {appType}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Card Body */}
@@ -114,26 +102,14 @@ export async function FeaturedPortfolio() {
                       {item.name}
                     </h3>
 
-                    {item.processes && (
-                      <p className="mt-1.5 font-mono text-[11px] text-accent/90 truncate">
-                        {item.processes}
-                      </p>
-                    )}
-
                     {(item.materials || item.material) && (
-                      <p className="mt-1 font-mono text-[10px] text-ink-dimmer truncate">
-                        Mat: {item.materials || item.material}
-                      </p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-dim">
+                        <Layers className="h-3 w-3 text-accent shrink-0" />
+                        <span className="font-medium truncate">
+                          {item.materials || item.material}
+                        </span>
+                      </div>
                     )}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-line/40 pt-3">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-ink-dimmer">
-                      View Specs
-                    </span>
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-line bg-bg-light/40 text-ink-dim transition-all group-hover:border-accent group-hover:bg-accent group-hover:text-white">
-                      <ArrowUpRight className="h-3 w-3" />
-                    </span>
                   </div>
                 </div>
 

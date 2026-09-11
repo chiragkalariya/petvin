@@ -6,6 +6,7 @@ import { Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Card, Badge, EmptyState } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Modal } from "@/components/ui/Modal";
 import { TrashIcon } from "@/components/ui/Icons";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { CheckCircle2, XCircle, Edit2, Layers, AlertTriangle } from "lucide-react";
@@ -281,71 +282,64 @@ export function CategoryManager() {
       </Card>
 
       {/* Add / Edit Category Modal */}
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200 rounded-xl"
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
+          <h3 className="font-display text-base uppercase text-ink tracking-wide font-bold">
+            {editingCategory ? "Edit Category" : "Add Category"}
+          </h3>
+          <button
+            onClick={() => setShowModal(false)}
+            className="text-ink-dimmer hover:text-ink transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
-              <h3 className="font-display text-base uppercase text-ink tracking-wide font-bold">
-                {editingCategory ? "Edit Category" : "Add Category"}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-ink-dimmer hover:text-ink transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveCategory} className="flex flex-col gap-4">
-              <Input
-                label="Category Name *"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                placeholder="e.g. Electrical & Electronics"
-                autoFocus
-                required
-              />
-
-              <Select
-                label="Status"
-                value={categoryStatus}
-                onChange={(e) =>
-                  setCategoryStatus(e.target.value as "ACTIVE" | "INACTIVE")
-                }
-                options={[
-                  { value: "ACTIVE", label: "Active (Visible on Website)" },
-                  {
-                    value: "INACTIVE",
-                    label: "Disabled (Hides category & all its items)",
-                  },
-                ]}
-              />
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" isLoading={savingCategory}>
-                  {editingCategory ? "Save Changes" : "Add Category"}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      )}
+
+        <form onSubmit={handleSaveCategory} className="flex flex-col gap-4">
+          <Input
+            label="Category Name *"
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            placeholder="e.g. Electrical & Electronics"
+            required
+          />
+
+          <Select
+            label="Status"
+            value={categoryStatus}
+            onChange={(e) =>
+              setCategoryStatus(e.target.value as "ACTIVE" | "INACTIVE")
+            }
+            options={[
+              { value: "ACTIVE", label: "Active (Visible on Website)" },
+              {
+                value: "INACTIVE",
+                label: "Disabled (Hides category & all its items)",
+              },
+            ]}
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" isLoading={savingCategory}>
+              {editingCategory ? "Save Changes" : "Add Category"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Disable Category Confirmation Modal */}
       <ConfirmModal

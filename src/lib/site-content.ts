@@ -1,9 +1,12 @@
 export const SITE = {
   name: "Petvin Febtech",
   tagline: "Precision Laser Cutting & CNC Bending",
-  phone: "+91 9624889080",
-  email: "petvinfebtech@gmail",
-  address: "239, Vivekanand Industrial Park, Kubadthal Road, opp. Arya Industrial Estate, Kubadthal, Ahmedabad, Gujarat 382433",
+  phone: "+91 7600652814",
+  phoneSecondary: "+91 9624889080",
+  phones: ["+91 7600652814", "+91 9624889080"],
+  email: "petvinfebtech@gmail.com",
+  address: "239, Vivekanand Industrial Park, Kubadthal Road, Opp. Arya Industrial Estate, Kubadthal, Ahmedabad, Gujrat - 382430",
+  mapUrl: "https://maps.app.goo.gl/1Hu77CLNKW6YidgZA",
   hours: "Mon – Sat, 9:00 AM – 7:00 PM",
 };
 

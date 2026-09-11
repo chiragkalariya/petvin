@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Modal } from "@/components/ui/Modal";
 import { TrashIcon, PencilIcon } from "@/components/ui/Icons";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { formatCurrency } from "@/lib/utils";
@@ -196,85 +197,78 @@ export function MaterialManager() {
       )}
 
       {/* Add / Edit Material Modal */}
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md border border-line bg-bg p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
+          <h3 className="font-display text-base uppercase text-ink tracking-wide">
+            {editingMaterial ? "Edit Material" : "Add Material"}
+          </h3>
+          <button
+            onClick={() => setShowModal(false)}
+            className="text-ink-dimmer hover:text-ink transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
-              <h3 className="font-display text-base uppercase text-ink tracking-wide">
-                {editingMaterial ? "Edit Material" : "Add Material"}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-ink-dimmer hover:text-ink transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveMaterial} className="flex flex-col gap-4">
-              <Input
-                label="Material Name / Type *"
-                value={materialName}
-                onChange={(e) => setMaterialName(e.target.value)}
-                placeholder="e.g. MS 1MM, MS 2MM, SS 304 2MM"
-                autoFocus
-                required
-              />
-              <Input
-                label="Rate per KG (₹) (Optional)"
-                type="number"
-                step="0.5"
-                min="0"
-                value={ratePerKg}
-                onChange={(e) => setRatePerKg(e.target.value)}
-                placeholder="e.g. 85.00 (optional)"
-              />
-              <Input
-                label="Cutting Cost Hourly (₹) (Optional)"
-                type="number"
-                step="1"
-                min="0"
-                value={cuttingCostHourly}
-                onChange={(e) => setCuttingCostHourly(e.target.value)}
-                placeholder="e.g. 1200.00 (optional)"
-              />
-              <Input
-                label="Bending Cost Hourly (₹) (Optional)"
-                type="number"
-                step="1"
-                min="0"
-                value={bendingCostHourly}
-                onChange={(e) => setBendingCostHourly(e.target.value)}
-                placeholder="e.g. 800.00 (optional)"
-              />
-              <p className="text-[11px] text-ink-dimmer italic">
-                * Note: Rates and process cost fields are optional. You can enter or update them at any time.
-              </p>
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" isLoading={saving}>
-                  {editingMaterial ? "Update Material" : "Save Material"}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      )}
+
+        <form onSubmit={handleSaveMaterial} className="flex flex-col gap-4">
+          <Input
+            label="Material Name / Type *"
+            value={materialName}
+            onChange={(e) => setMaterialName(e.target.value)}
+            placeholder="e.g. MS 1MM, MS 2MM, SS 304 2MM"
+            required
+          />
+          <Input
+            label="Rate per KG (₹) (Optional)"
+            type="number"
+            step="0.5"
+            min="0"
+            value={ratePerKg}
+            onChange={(e) => setRatePerKg(e.target.value)}
+            placeholder="e.g. 85.00 (optional)"
+          />
+          <Input
+            label="Cutting Cost Hourly (₹) (Optional)"
+            type="number"
+            step="1"
+            min="0"
+            value={cuttingCostHourly}
+            onChange={(e) => setCuttingCostHourly(e.target.value)}
+            placeholder="e.g. 1200.00 (optional)"
+          />
+          <Input
+            label="Bending Cost Hourly (₹) (Optional)"
+            type="number"
+            step="1"
+            min="0"
+            value={bendingCostHourly}
+            onChange={(e) => setBendingCostHourly(e.target.value)}
+            placeholder="e.g. 800.00 (optional)"
+          />
+          <p className="text-[11px] text-ink-dimmer italic">
+            * Note: Rates and process cost fields are optional. You can enter or update them at any time.
+          </p>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-line-soft">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" isLoading={saving}>
+              {editingMaterial ? "Update Material" : "Save Material"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

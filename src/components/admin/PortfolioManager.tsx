@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState } from "@/components/ui/Card";
 import { Table, THead, TH, TRow, TD } from "@/components/ui/Table";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Modal } from "@/components/ui/Modal";
 import { TrashIcon } from "@/components/ui/Icons";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { slugify } from "@/lib/utils";
@@ -20,7 +21,10 @@ import {
   Filter,
   Layers,
   Sparkles,
+  Crop,
 } from "lucide-react";
+import { ImageCropperModal } from "@/components/ui/ImageCropperModal";
+import { autoCropToRatio } from "@/lib/cropImage";
 
 interface Category {
   id: string;
@@ -46,26 +50,6 @@ interface PortfolioItemData {
   category: { id: string; name: string; slug: string };
 }
 
-const PRESET_INDUSTRIES = [
-  "Architecture & Interior",
-  "Electrical",
-  "HVAC",
-  "Automotive",
-  "Industrial Machinery",
-  "Furniture",
-  "Agriculture",
-  "Construction",
-  "Renewable Energy",
-  "General Engineering",
-];
-
-const PRESET_PROCESSES = [
-  "Laser Cutting",
-  "CNC Bending",
-  "Laser Cutting + CNC Bending",
-  "Sheet Metal Fabrication",
-];
-
 const PRESET_MATERIALS = [
   "Mild Steel (MS)",
   "Stainless Steel (SS)",
@@ -76,13 +60,6 @@ const PRESET_MATERIALS = [
   "MS / SS / Aluminium",
 ];
 
-const APPLICATION_TYPES = [
-  "Job Work",
-  "OEM Component",
-  "Standard Product",
-  "Custom Fabrication",
-];
-
 export function PortfolioManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<PortfolioItemData[]>([]);
@@ -91,9 +68,6 @@ export function PortfolioManager() {
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
-  const [selectedIndustryFilter, setSelectedIndustryFilter] = useState("all");
-  const [selectedProcessFilter, setSelectedProcessFilter] = useState("all");
-  const [selectedAppTypeFilter, setSelectedAppTypeFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
 
   // Modal State (Add / Edit)
@@ -104,20 +78,74 @@ export function PortfolioManager() {
   // Form Fields
   const [itemName, setItemName] = useState("");
   const [itemCategoryId, setItemCategoryId] = useState("");
-  const [itemIndustry, setItemIndustry] = useState("Electrical");
-  const [itemProcess, setItemProcess] = useState("Laser Cutting + CNC Bending");
   const [itemMaterial, setItemMaterial] = useState("Mild Steel (MS)");
-  const [itemAppType, setItemAppType] = useState("Job Work");
   const [itemDescription, setItemDescription] = useState("");
-  const [itemFeatured, setItemFeatured] = useState(false);
-  const [itemStatus, setItemStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
-  const [itemDisplayOrder, setItemDisplayOrder] = useState<number>(0);
   const [itemFile, setItemFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  // Image Cropper states
+  const [showCropperModal, setShowCropperModal] = useState(false);
+  const [cropperRawSrc, setCropperRawSrc] = useState<string>("");
+  const [cropperFileName, setCropperFileName] = useState<string>("portfolio-image.jpg");
 
   // Delete modal state
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Photo must be smaller than 15MB");
+      return;
+    }
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type.toLowerCase())) {
+      toast.error("Only JPG, JPEG, PNG, and WEBP images are supported");
+      return;
+    }
+
+    setCropperFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setCropperRawSrc(dataUrl);
+
+      // Auto-crop to 4:3 ratio without opening the modal
+      try {
+        const cropped = await autoCropToRatio(dataUrl, 4 / 3, file.name);
+        if (cropped) {
+          setItemFile(cropped.file);
+          setPreviewUrl(cropped.url);
+          toast.success("Photo auto-cropped to 4:3 ratio");
+        } else {
+          setItemFile(file);
+        }
+      } catch (err) {
+        console.error("Auto crop error:", err);
+        setItemFile(file);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function handleCropCompleted(croppedFile: File, croppedUrl: string) {
+    setItemFile(croppedFile);
+    setPreviewUrl(croppedUrl);
+    setShowCropperModal(false);
+    toast.success("Crop updated");
+  }
+
+  function handleReCrop() {
+    if (cropperRawSrc) {
+      setShowCropperModal(true);
+    } else if (previewUrl) {
+      setCropperRawSrc(previewUrl);
+      setShowCropperModal(true);
+    }
+  }
 
   function loadData() {
     setLoading(true);
@@ -161,16 +189,12 @@ export function PortfolioManager() {
     setEditingItem(null);
     setItemName("");
     setItemCategoryId(categories[0]?.id || "");
-    setItemIndustry("Electrical");
-    setItemProcess("Laser Cutting + CNC Bending");
     setItemMaterial("Mild Steel (MS)");
-    setItemAppType("Job Work");
     setItemDescription("");
-    setItemFeatured(false);
-    setItemStatus("ACTIVE");
-    setItemDisplayOrder(items.length + 1);
     setItemFile(null);
     setPreviewUrl("");
+    setCropperRawSrc("");
+    setShowCropperModal(false);
     setShowModal(true);
   }
 
@@ -178,16 +202,12 @@ export function PortfolioManager() {
     setEditingItem(item);
     setItemName(item.name);
     setItemCategoryId(item.category?.id || categories[0]?.id || "");
-    setItemIndustry(item.industry || "General Engineering");
-    setItemProcess(item.processes || "Laser Cutting + CNC Bending");
     setItemMaterial(item.materials || item.material || "Mild Steel (MS)");
-    setItemAppType(item.applicationType || "Job Work");
     setItemDescription(item.description || "");
-    setItemFeatured(item.featured || false);
-    setItemStatus((item.status as "ACTIVE" | "INACTIVE") || "ACTIVE");
-    setItemDisplayOrder(item.displayOrder ?? 0);
     setItemFile(null);
     setPreviewUrl(item.imageUrl || "");
+    setCropperRawSrc(item.imageUrl || "");
+    setShowCropperModal(false);
     setShowModal(true);
   }
 
@@ -202,20 +222,8 @@ export function PortfolioManager() {
       toast.error("Category is required");
       return;
     }
-    if (!itemIndustry.trim()) {
-      toast.error("Industry is required");
-      return;
-    }
-    if (!itemProcess.trim()) {
-      toast.error("Process is required");
-      return;
-    }
     if (!itemMaterial.trim()) {
       toast.error("Material is required");
-      return;
-    }
-    if (!itemAppType) {
-      toast.error("Application Type is required");
       return;
     }
 
@@ -255,20 +263,24 @@ export function PortfolioManager() {
         finalImageUrl = uploadData.url;
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: itemName.trim(),
         categoryId: itemCategoryId,
-        industry: itemIndustry.trim(),
-        processes: itemProcess.trim(),
         materials: itemMaterial.trim(),
         material: itemMaterial.trim(),
-        applicationType: itemAppType,
         description: itemDescription.trim(),
         imageUrl: finalImageUrl,
-        featured: itemFeatured,
-        status: itemStatus,
-        displayOrder: Number(itemDisplayOrder) || 0,
       };
+
+      // Preserve existing values for fields removed from modal
+      if (!editingItem) {
+        payload.industry = "General Engineering";
+        payload.processes = "Laser Cutting + CNC Bending";
+        payload.applicationType = "Job Work";
+        payload.featured = false;
+        payload.status = "ACTIVE";
+        payload.displayOrder = items.length + 1;
+      }
 
       const url = editingItem
         ? `/api/portfolio/${editingItem.id}`
@@ -373,30 +385,6 @@ export function PortfolioManager() {
         return false;
       }
 
-      // Industry filter
-      if (
-        selectedIndustryFilter !== "all" &&
-        !item.industry?.toLowerCase().includes(selectedIndustryFilter.toLowerCase())
-      ) {
-        return false;
-      }
-
-      // Process filter
-      if (
-        selectedProcessFilter !== "all" &&
-        !item.processes?.toLowerCase().includes(selectedProcessFilter.toLowerCase())
-      ) {
-        return false;
-      }
-
-      // Application Type filter
-      if (
-        selectedAppTypeFilter !== "all" &&
-        item.applicationType !== selectedAppTypeFilter
-      ) {
-        return false;
-      }
-
       // Status filter
       if (selectedStatusFilter !== "all") {
         const itemStatusVal = item.status || "ACTIVE";
@@ -408,34 +396,18 @@ export function PortfolioManager() {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = item.name.toLowerCase().includes(q);
         const matchesCategory = item.category?.name.toLowerCase().includes(q);
-        const matchesIndustry = item.industry?.toLowerCase().includes(q);
-        const matchesProcess = item.processes?.toLowerCase().includes(q);
         const matchesMaterial =
           item.materials?.toLowerCase().includes(q) ||
           item.material?.toLowerCase().includes(q);
 
-        if (
-          !matchesName &&
-          !matchesCategory &&
-          !matchesIndustry &&
-          !matchesProcess &&
-          !matchesMaterial
-        ) {
+        if (!matchesName && !matchesCategory && !matchesMaterial) {
           return false;
         }
       }
 
       return true;
     });
-  }, [
-    items,
-    selectedCategoryFilter,
-    selectedIndustryFilter,
-    selectedProcessFilter,
-    selectedAppTypeFilter,
-    selectedStatusFilter,
-    searchQuery,
-  ]);
+  }, [items, selectedCategoryFilter, selectedStatusFilter, searchQuery]);
 
   const activeCount = useMemo(
     () => items.filter((i) => (i.status || "ACTIVE") === "ACTIVE").length,
@@ -506,7 +478,7 @@ export function PortfolioManager() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, category, industry..."
+              placeholder="Search by name, category, material..."
               className="w-full rounded-lg border border-line bg-bg-alt pl-10 pr-4 py-2 text-xs text-ink placeholder:text-ink-dimmer focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
             {searchQuery && (
@@ -535,34 +507,6 @@ export function PortfolioManager() {
               ))}
             </select>
 
-            {/* Industry Filter */}
-            <select
-              value={selectedIndustryFilter}
-              onChange={(e) => setSelectedIndustryFilter(e.target.value)}
-              className="rounded-lg border border-line bg-bg-alt px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
-            >
-              <option value="all">All Industries</option>
-              {PRESET_INDUSTRIES.map((ind) => (
-                <option key={ind} value={ind}>
-                  {ind}
-                </option>
-              ))}
-            </select>
-
-            {/* Application Type Filter */}
-            <select
-              value={selectedAppTypeFilter}
-              onChange={(e) => setSelectedAppTypeFilter(e.target.value)}
-              className="rounded-lg border border-line bg-bg-alt px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
-            >
-              <option value="all">All Applications</option>
-              {APPLICATION_TYPES.map((app) => (
-                <option key={app} value={app}>
-                  {app}
-                </option>
-              ))}
-            </select>
-
             {/* Status Filter */}
             <select
               value={selectedStatusFilter}
@@ -578,30 +522,25 @@ export function PortfolioManager() {
 
         {/* Filter Badges Active Summary */}
         {(selectedCategoryFilter !== "all" ||
-          selectedIndustryFilter !== "all" ||
-          selectedAppTypeFilter !== "all" ||
           selectedStatusFilter !== "all" ||
           searchQuery) && (
-          <div className="flex items-center gap-2 pt-2 border-t border-line/40 text-xs text-ink-dim">
-            <Filter className="h-3.5 w-3.5 text-accent" />
-            <span>
-              Showing {filteredItems.length} of {items.length} items
-            </span>
-            <button
-              onClick={() => {
-                setSelectedCategoryFilter("all");
-                setSelectedIndustryFilter("all");
-                setSelectedProcessFilter("all");
-                setSelectedAppTypeFilter("all");
-                setSelectedStatusFilter("all");
-                setSearchQuery("");
-              }}
-              className="ml-auto text-accent underline hover:text-accent-hover text-xs font-semibold"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+            <div className="flex items-center gap-2 pt-2 border-t border-line/40 text-xs text-ink-dim">
+              <Filter className="h-3.5 w-3.5 text-accent" />
+              <span>
+                Showing {filteredItems.length} of {items.length} items
+              </span>
+              <button
+                onClick={() => {
+                  setSelectedCategoryFilter("all");
+                  setSelectedStatusFilter("all");
+                  setSearchQuery("");
+                }}
+                className="ml-auto text-accent underline hover:text-accent-hover text-xs font-semibold"
+              >
+                Reset Filters
+              </button>
+            </div>
+          )}
       </div>
 
       {/* Main Table */}
@@ -625,13 +564,9 @@ export function PortfolioManager() {
               <TH className="w-14">Photo</TH>
               <TH>Item Name & Slug</TH>
               <TH>Category</TH>
-              <TH>Industry</TH>
-              <TH>Process</TH>
               <TH>Material</TH>
-              <TH>Application</TH>
               <TH className="text-center">Featured</TH>
               <TH className="text-center">Status</TH>
-              <TH className="text-center">Order</TH>
               <TH className="text-right">Actions</TH>
             </THead>
             <tbody>
@@ -677,20 +612,6 @@ export function PortfolioManager() {
                       </span>
                     </TD>
 
-                    {/* Industry */}
-                    <TD>
-                      <span className="text-xs text-ink-dim">
-                        {item.industry || "—"}
-                      </span>
-                    </TD>
-
-                    {/* Process */}
-                    <TD>
-                      <span className="text-xs font-mono text-ink-dimmer">
-                        {item.processes || "—"}
-                      </span>
-                    </TD>
-
                     {/* Material */}
                     <TD>
                       <span className="text-xs text-ink-dim">
@@ -698,32 +619,14 @@ export function PortfolioManager() {
                       </span>
                     </TD>
 
-                    {/* Application Type */}
-                    <TD>
-                      <span
-                        className={`inline-block rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
-                          item.applicationType === "Job Work"
-                            ? "bg-accent/15 text-accent border border-accent/30"
-                            : item.applicationType === "OEM Component"
-                            ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
-                            : item.applicationType === "Custom Fabrication"
-                            ? "bg-purple-500/15 text-purple-400 border border-purple-500/30"
-                            : "bg-bg-light text-ink-dim border border-line"
-                        }`}
-                      >
-                        {item.applicationType || "Job Work"}
-                      </span>
-                    </TD>
-
                     {/* Featured Toggle */}
                     <TD className="text-center">
                       <button
                         onClick={() => handleToggleFeatured(item)}
-                        className={`p-1.5 rounded-md transition-colors ${
-                          isFeatured
+                        className={`p-1.5 rounded-md transition-colors ${isFeatured
                             ? "text-accent hover:bg-accent/10"
                             : "text-ink-dimmer hover:text-ink hover:bg-bg-light"
-                        }`}
+                          }`}
                         title={isFeatured ? "Featured (Click to unfeature)" : "Not featured (Click to feature)"}
                       >
                         <Star
@@ -737,11 +640,10 @@ export function PortfolioManager() {
                     <TD className="text-center">
                       <button
                         onClick={() => handleToggleStatus(item)}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold transition-colors ${
-                          isActive
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold transition-colors ${isActive
                             ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30"
                             : "bg-zinc-500/15 text-zinc-400 hover:bg-zinc-500/25 border border-zinc-500/30"
-                        }`}
+                          }`}
                         title="Click to toggle status"
                       >
                         {isActive ? (
@@ -756,11 +658,6 @@ export function PortfolioManager() {
                           </>
                         )}
                       </button>
-                    </TD>
-
-                    {/* Display Order */}
-                    <TD className="text-center font-mono text-xs text-ink-dimmer">
-                      {item.displayOrder ?? 0}
                     </TD>
 
                     {/* Actions */}
@@ -791,15 +688,11 @@ export function PortfolioManager() {
       )}
 
       {/* Add / Edit Item Modal */}
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-3xl rounded-xl border border-line-bright bg-bg-card p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 my-8 max-h-[90vh] overflow-y-auto"
-          >
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="max-w-2xl"
+      >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-line pb-4 mb-6">
               <div className="flex items-center gap-2.5">
@@ -827,7 +720,6 @@ export function PortfolioManager() {
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
                     placeholder="e.g. Control Panel Enclosure"
-                    autoFocus
                     required
                   />
                   {itemName.trim() && (
@@ -845,98 +737,34 @@ export function PortfolioManager() {
                 />
               </div>
 
-              {/* Row 2: Industry & Process */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer block mb-2">
-                    Industry *
-                  </label>
-                  <div className="space-y-2">
-                    <select
-                      value={itemIndustry}
-                      onChange={(e) => setItemIndustry(e.target.value)}
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-                    >
-                      {PRESET_INDUSTRIES.map((ind) => (
-                        <option key={ind} value={ind}>
-                          {ind}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      value={itemIndustry}
-                      onChange={(e) => setItemIndustry(e.target.value)}
-                      placeholder="Or type custom industry (e.g. Electrical, Automotive)"
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-1.5 text-xs focus:border-accent focus:outline-none placeholder:text-ink-dimmer"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer block mb-2">
-                    Process *
-                  </label>
-                  <div className="space-y-2">
-                    <select
-                      value={itemProcess}
-                      onChange={(e) => setItemProcess(e.target.value)}
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-                    >
-                      {PRESET_PROCESSES.map((proc) => (
-                        <option key={proc} value={proc}>
-                          {proc}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      value={itemProcess}
-                      onChange={(e) => setItemProcess(e.target.value)}
-                      placeholder="Or custom process (e.g. Laser Cutting + CNC Bending)"
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-1.5 text-xs focus:border-accent focus:outline-none placeholder:text-ink-dimmer"
-                    />
-                  </div>
+              {/* Row 2: Material */}
+              <div>
+                <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer block mb-2">
+                  Material *
+                </label>
+                <div className="space-y-2">
+                  <select
+                    value={itemMaterial}
+                    onChange={(e) => setItemMaterial(e.target.value)}
+                    className="w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                  >
+                    {PRESET_MATERIALS.map((mat) => (
+                      <option key={mat} value={mat}>
+                        {mat}
+                      </option>
+                    ))}
+                  </select>
+                  {/* <input
+                    type="text"
+                    value={itemMaterial}
+                    onChange={(e) => setItemMaterial(e.target.value)}
+                    placeholder="Or specify exact grades (e.g. MS 3mm, SS 304, AL 5052)"
+                    className="w-full bg-bg-alt border border-line text-ink px-3.5 py-1.5 text-xs focus:border-accent focus:outline-none placeholder:text-ink-dimmer"
+                  /> */}
                 </div>
               </div>
 
-              {/* Row 3: Material & Application Type */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer block mb-2">
-                    Material *
-                  </label>
-                  <div className="space-y-2">
-                    <select
-                      value={itemMaterial}
-                      onChange={(e) => setItemMaterial(e.target.value)}
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-                    >
-                      {PRESET_MATERIALS.map((mat) => (
-                        <option key={mat} value={mat}>
-                          {mat}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      value={itemMaterial}
-                      onChange={(e) => setItemMaterial(e.target.value)}
-                      placeholder="Or specify exact grades (e.g. MS 3mm, SS 304, AL 5052)"
-                      className="w-full bg-bg-alt border border-line text-ink px-3.5 py-1.5 text-xs focus:border-accent focus:outline-none placeholder:text-ink-dimmer"
-                    />
-                  </div>
-                </div>
-
-                <Select
-                  label="Application Type *"
-                  value={itemAppType}
-                  onChange={(e) => setItemAppType(e.target.value)}
-                  options={APPLICATION_TYPES.map((t) => ({ value: t, label: t }))}
-                />
-              </div>
-
-              {/* Row 4: Description & Photo Upload with Preview */}
+              {/* Row 3: Description & Photo Upload with Preview */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Textarea
                   label="Description (Optional)"
@@ -946,74 +774,53 @@ export function PortfolioManager() {
                 />
 
                 <div className="flex flex-col gap-2">
-                  <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">
-                    Photo {editingItem ? "(Leave blank to keep existing)" : "*"}
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={(e) => setItemFile(e.target.files?.[0] ?? null)}
-                    className="border border-dashed border-line bg-bg-alt px-3.5 py-2.5 text-xs text-ink-dim file:mr-3 file:border-0 file:bg-bg-light file:px-3 file:py-1 file:text-xs file:font-semibold file:text-ink cursor-pointer focus:outline-none"
-                  />
-                  {previewUrl && (
-                    <div className="mt-2 flex items-center gap-3 rounded-lg border border-line bg-bg-alt p-2">
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded border border-line">
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="text-xs text-ink-dim">
-                        <p className="font-medium text-white">Image Preview</p>
-                        <p className="text-[11px] text-ink-dimmer">
-                          {itemFile ? `${itemFile.name} (${(itemFile.size / 1024).toFixed(0)} KB)` : "Current Image"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 5: Featured & Status & Display Order */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-line/40">
-                {/* Featured Toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-line bg-bg-alt p-3">
-                  <div>
-                    <span className="font-mono text-xs uppercase font-bold text-white block">
-                      Featured
-                    </span>
-                    <span className="text-[11px] text-ink-dimmer">
-                      Show on homepage
+                  <div className="flex items-center justify-between">
+                    <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer">
+                      Photo {editingItem ? "(Leave blank to keep existing)" : "*"}
+                    </label>
+                    <span className="font-mono text-[10px] text-accent">
+                      Fixed 4:3 Ratio (Auto-Crop)
                     </span>
                   </div>
                   <input
-                    type="checkbox"
-                    checked={itemFeatured}
-                    onChange={(e) => setItemFeatured(e.target.checked)}
-                    className="h-4 w-4 rounded border-line text-accent focus:ring-accent accent-accent cursor-pointer"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleFileSelected}
+                    className="border border-dashed border-line bg-bg-alt px-3.5 py-2.5 text-xs text-ink-dim file:mr-3 file:border-0 file:bg-bg-light file:px-3 file:py-1 file:text-xs file:font-semibold file:text-ink cursor-pointer focus:outline-none hover:border-accent/50 transition-colors"
                   />
+                  {previewUrl && (
+                    <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-alt p-2.5">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="relative h-14 w-18 shrink-0 overflow-hidden rounded border border-line bg-black/40">
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="text-xs text-ink-dim min-w-0">
+                          <p className="font-medium text-white truncate">
+                            {itemFile ? itemFile.name : "Current Image"}
+                          </p>
+                          <p className="text-[11px] text-ink-dimmer">
+                            {itemFile
+                              ? `${(itemFile.size / 1024).toFixed(0)} KB (Cropped 4:3)`
+                              : "Active Card Photo"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleReCrop}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-accent/15 text-accent hover:bg-accent/25 border border-accent/30 transition-colors shrink-0"
+                        title="Crop / Adjust image"
+                      >
+                        <Crop className="h-3.5 w-3.5" />
+                        <span>Adjust</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                {/* Status */}
-                <Select
-                  label="Status"
-                  value={itemStatus}
-                  onChange={(e) => setItemStatus(e.target.value as "ACTIVE" | "INACTIVE")}
-                  options={[
-                    { value: "ACTIVE", label: "Active (Visible online)" },
-                    { value: "INACTIVE", label: "Inactive (Hidden)" },
-                  ]}
-                />
-
-                {/* Display Order */}
-                <Input
-                  label="Display Order"
-                  type="number"
-                  value={itemDisplayOrder}
-                  onChange={(e) => setItemDisplayOrder(Number(e.target.value) || 0)}
-                  placeholder="0"
-                />
               </div>
 
               {/* Modal Actions */}
@@ -1031,9 +838,7 @@ export function PortfolioManager() {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal
@@ -1043,6 +848,16 @@ export function PortfolioManager() {
         isLoading={isDeletingItem}
         onConfirm={handleConfirmDeleteItem}
         onClose={() => setDeletingItemId(null)}
+      />
+
+      {/* Image Cropper Modal */}
+      <ImageCropperModal
+        isOpen={showCropperModal}
+        imageSrc={cropperRawSrc}
+        originalFileName={cropperFileName}
+        onCropComplete={handleCropCompleted}
+        onClose={() => setShowCropperModal(false)}
+        defaultAspect={4 / 3}
       />
     </div>
   );

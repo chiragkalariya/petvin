@@ -111,8 +111,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
   });
 
   const imgSrc = getImageSrc(item.imageUrl);
-  const appType = item.applicationType || "Job Work";
-  const isJobWork = appType === "Job Work";
+
 
   // Structured Data Schema for Search Engines (JSON-LD)
   const structuredData = {
@@ -206,17 +205,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
                     </span>
                   </div>
 
-                  <div className="absolute right-4 top-4 z-10">
-                    <span
-                      className={`rounded-md px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider backdrop-blur-md border ${
-                        isJobWork
-                          ? "bg-accent/90 text-white border-accent shadow-[0_0_15px_rgba(255,106,26,0.4)]"
-                          : "bg-bg/90 text-white border-white/20"
-                      }`}
-                    >
-                      {appType}
-                    </span>
-                  </div>
+
                 </div>
 
                 {/* Machine Capabilities Highlight Strip */}
@@ -269,11 +258,9 @@ export default async function PortfolioDetailPage({ params }: Props) {
               <div className="lg:col-span-5 space-y-6">
                 {/* Title & Industry */}
                 <div>
-                  {item.industry && (
-                    <span className="font-mono text-xs uppercase tracking-widest text-accent font-bold">
-                      {item.industry}
-                    </span>
-                  )}
+                  <span className="font-mono text-xs uppercase tracking-widest text-accent font-bold">
+                    {item.category.name}
+                  </span>
                   <h1 className="mt-2 font-display text-3xl sm:text-4xl font-extrabold uppercase tracking-tight text-white leading-tight">
                     {item.name}
                   </h1>
@@ -294,28 +281,10 @@ export default async function PortfolioDetailPage({ params }: Props) {
                 <div className="rounded-xl border border-line bg-bg-card divide-y divide-line/60">
                   <div className="flex items-center justify-between p-3.5">
                     <span className="font-mono text-xs uppercase text-ink-dimmer">
-                      Cutting Process
-                    </span>
-                    <span className="font-display text-xs font-bold text-white">
-                      {item.processes || "3 kW Fiber Laser Cutting"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3.5">
-                    <span className="font-mono text-xs uppercase text-ink-dimmer">
                       Material Specification
                     </span>
                     <span className="font-display text-xs font-bold text-accent">
                       {item.materials || item.material || "MS / SS / Aluminium / GI"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3.5">
-                    <span className="font-mono text-xs uppercase text-ink-dimmer">
-                      Application Scope
-                    </span>
-                    <span className="font-mono text-xs font-bold text-white">
-                      {item.applicationType || "Job Work / OEM Component"}
                     </span>
                   </div>
 
@@ -416,15 +385,22 @@ export default async function PortfolioDetailPage({ params }: Props) {
                         />
                       </div>
                       <div className="p-5">
-                        <span className="font-mono text-[10px] uppercase font-bold text-accent">
-                          {rel.applicationType || "Job Work"}
-                        </span>
-                        <h3 className="mt-1 font-display text-base font-bold uppercase text-white group-hover:text-accent transition-colors line-clamp-1">
+                        <h3 className="font-display text-base font-bold uppercase text-white group-hover:text-accent transition-colors line-clamp-1">
                           {rel.name}
                         </h3>
-                        <p className="mt-2 text-xs text-ink-dimmer line-clamp-2">
-                          {rel.description}
-                        </p>
+                        {(rel.materials || rel.material) && (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-ink-dim">
+                            <Layers className="h-3 w-3 text-accent shrink-0" />
+                            <span className="font-medium truncate">
+                              {rel.materials || rel.material}
+                            </span>
+                          </div>
+                        )}
+                        {rel.description && (
+                          <p className="mt-2 text-xs text-ink-dimmer line-clamp-2">
+                            {rel.description}
+                          </p>
+                        )}
                       </div>
                     </Link>
                   );
