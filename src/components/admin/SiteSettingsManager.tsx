@@ -8,7 +8,6 @@ import {
   FileText,
   ShieldCheck,
   Save,
-  RotateCcw,
   Phone,
   Mail,
   Globe,
@@ -19,6 +18,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/admin/PageHeader";
+
+function getDisplayImageUrl(url?: string | null): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (trimmed.startsWith("data:") || trimmed.startsWith("/") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+  return `/api/image?url=${encodeURIComponent(trimmed)}`;
+}
 
 export interface SiteSettingsState {
   companyName: string;
@@ -197,18 +205,6 @@ export function SiteSettingsManager() {
       <PageHeader
         title="Company & Print Settings"
         description="Configure dynamic company profile, bank accounts, GST/PAN numbers, and invoice defaults used across all printable vouchers and invoices."
-        action={
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleReset} disabled={isSaving}>
-              <RotateCcw className="h-4 w-4 mr-1.5" />
-              Reset Defaults
-            </Button>
-            <Button type="button" variant="primary" size="sm" onClick={handleSave} isLoading={isSaving}>
-              <Save className="h-4 w-4 mr-1.5" />
-              Save Changes
-            </Button>
-          </div>
-        }
       />
 
       <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -417,7 +413,7 @@ export function SiteSettingsManager() {
                     <div className="flex items-center gap-3 border border-line bg-bg p-2 rounded">
                       <div className="flex h-12 w-28 items-center justify-center rounded border border-line-soft bg-white p-1">
                         <img
-                          src={formData.signatureImageUrl}
+                          src={getDisplayImageUrl(formData.signatureImageUrl)}
                           alt="Authorised Signature"
                           className="max-h-10 max-w-full object-contain"
                         />
@@ -582,7 +578,7 @@ export function SiteSettingsManager() {
                   <div className="text-[10px] font-bold text-[#0f172a]">{formData.authorisedSignature || "For Petvin Febtech"}</div>
                   {formData.signatureImageUrl ? (
                     <div className="h-10 flex items-center justify-center my-0.5">
-                      <img src={formData.signatureImageUrl} alt="Signature Preview" className="max-h-9 max-w-[130px] object-contain" />
+                      <img src={getDisplayImageUrl(formData.signatureImageUrl)} alt="Signature Preview" className="max-h-9 max-w-[130px] object-contain" />
                     </div>
                   ) : (
                     <div className="h-8" />
