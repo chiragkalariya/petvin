@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
-const ALLOWED_EXTENSIONS = [".dxf", ".pdf", ".png", ".jpg", ".jpeg", ".webp"];
+const ALLOWED_EXTENSIONS = [".dxf", ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".svg"];
 
 export async function POST(req: NextRequest) {
   try {

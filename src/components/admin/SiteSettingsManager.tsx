@@ -77,8 +77,8 @@ export function SiteSettingsManager() {
     try {
       const res = await fetch("/api/site-settings");
       if (res.ok) {
-        const data = await res.json();
-        if (data.settings) {
+        const data = await res.json().catch(() => null);
+        if (data?.settings) {
           setFormData({
             companyName: data.settings.companyName || DEFAULT_FORM_STATE.companyName,
             tagline: data.settings.tagline || "",
@@ -118,6 +118,7 @@ export function SiteSettingsManager() {
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Signature image must be under 5MB");
+      e.target.value = "";
       return;
     }
 
@@ -132,40 +133,27 @@ export function SiteSettingsManager() {
         body: uploadForm,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          handleChange("signatureImageUrl", data.url);
-          toast.success("Signature uploaded successfully!");
-          return;
-        }
-      }
+      const data = await res.json().catch(() => null);
 
-      // Fallback: Read as base64 Data URL so it always succeeds
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          handleChange("signatureImageUrl", reader.result);
-          toast.success("Signature loaded successfully!");
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          handleChange("signatureImageUrl", reader.result);
-          toast.success("Signature loaded successfully!");
-        }
-      };
-      reader.readAsDataURL(file);
+      if (res.ok && data?.url) {
+        handleChange("signatureImageUrl", data.url);
+        toast.success("Signature uploaded! Click 'Save Changes' to apply.");
+      } else {
+        toast.error(data?.error || "Upload failed. Please upload a PNG, JPG, or WEBP image under 5MB.");
+      }
+    } catch (err: any) {
+      console.error("Signature upload error:", err);
+      toast.error(err?.message || "Failed to upload signature image");
     } finally {
       setIsUploadingSig(false);
+      e.target.value = "";
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e?.preventDefault) {
+      e.preventDefault();
+    }
     setIsSaving(true);
     try {
       const res = await fetch("/api/site-settings", {
@@ -174,14 +162,16 @@ export function SiteSettingsManager() {
         body: JSON.stringify(formData),
       });
 
+      const resData = await res.json().catch(() => null);
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to save settings");
+        throw new Error(resData?.error || `Failed to save settings (HTTP ${res.status})`);
       }
 
       toast.success("Site and billing settings updated successfully!");
     } catch (err: any) {
-      toast.error(err.message || "Failed to update settings");
+      console.error("Save settings error:", err);
+      toast.error(err?.message || "Failed to update settings");
     } finally {
       setIsSaving(false);
     }

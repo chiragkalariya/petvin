@@ -148,7 +148,7 @@ export async function PATCH(
         customerEmail: data.customerEmail?.trim() || null,
         customerGst: data.customerGst?.trim().toUpperCase() || null,
         customerAddress: data.customerAddress?.trim() || null,
-        placeOfSupply: data.placeOfSupply?.trim() || "Ahmedabad",
+        placeOfSupply: data.placeOfSupply?.trim() || null,
         shipToName: data.shipToName?.trim() || null,
         shipToAddress: data.shipToAddress?.trim() || null,
         shipToPhone: data.shipToPhone?.trim() || null,

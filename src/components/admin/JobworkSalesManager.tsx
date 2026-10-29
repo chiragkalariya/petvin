@@ -83,8 +83,8 @@ function defaultLineItem(): JobworkLineItemData {
     processType: "Laser Cutting",
     material: "",
     thicknessMm: 0,
-    hsnSac: "9988",
-    quantity: 1,
+    hsnSac: "",
+    quantity: 0,
     unit: "Nos",
     unitPrice: 0,
     total: 0,
@@ -110,7 +110,7 @@ export function JobworkSalesManager() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerGst, setCustomerGst] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [placeOfSupply, setPlaceOfSupply] = useState("Ahmedabad");
+  const [placeOfSupply, setPlaceOfSupply] = useState("");
 
   // Parties List & Selected Party
   const [parties, setParties] = useState<PartyRecord[]>([]);
@@ -178,7 +178,7 @@ export function JobworkSalesManager() {
       setCustomerEmail("");
       setCustomerGst("");
       setCustomerAddress("");
-      setPlaceOfSupply("Ahmedabad");
+      setPlaceOfSupply("");
       return;
     }
     const found = parties.find((p) => p.id === partyId);
@@ -188,7 +188,7 @@ export function JobworkSalesManager() {
       setCustomerEmail(found.email || "");
       setCustomerGst(found.gstin || "");
       setCustomerAddress(found.address || "");
-      setPlaceOfSupply(found.city || "Ahmedabad");
+      setPlaceOfSupply(found.city || "");
     }
   };
 
@@ -262,7 +262,7 @@ export function JobworkSalesManager() {
     setCustomerEmail("");
     setCustomerGst("");
     setCustomerAddress("");
-    setPlaceOfSupply("Ahmedabad");
+    setPlaceOfSupply("");
     setSameAsBillTo(true);
     setShipToName("");
     setShipToAddress("");
@@ -288,7 +288,7 @@ export function JobworkSalesManager() {
     setCustomerEmail(sale.customerEmail || "");
     setCustomerGst(sale.customerGst || "");
     setCustomerAddress(sale.customerAddress || "");
-    setPlaceOfSupply(sale.placeOfSupply || "Ahmedabad");
+    setPlaceOfSupply(sale.placeOfSupply || "");
 
     const matchedParty = parties.find(
       (p) => p.companyName.toLowerCase() === sale.customerName?.toLowerCase()
@@ -359,6 +359,11 @@ export function JobworkSalesManager() {
       return;
     }
 
+    if (items.some((it) => !it.quantity || it.quantity <= 0)) {
+      toast.error("Please enter a valid quantity for all line items");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -370,16 +375,17 @@ export function JobworkSalesManager() {
         customerEmail: customerEmail.trim() || undefined,
         customerGst: customerGst.trim().toUpperCase() || undefined,
         customerAddress: customerAddress.trim() || undefined,
-        placeOfSupply: placeOfSupply.trim() || "Ahmedabad",
+        placeOfSupply: placeOfSupply.trim() || undefined,
         shipToName: sameAsBillTo ? customerName.trim() : (shipToName.trim() || undefined),
         shipToAddress: sameAsBillTo ? customerAddress.trim() : (shipToAddress.trim() || undefined),
         shipToPhone: sameAsBillTo ? customerPhone.trim() : (shipToPhone.trim() || undefined),
         shipToGst: sameAsBillTo ? customerGst.trim().toUpperCase() : (shipToGst.trim().toUpperCase() || undefined),
         items: items.map((it) => ({
           ...it,
-          quantity: Number(it.quantity) || 1,
+          hsnSac: it.hsnSac?.trim() || "",
+          quantity: Number(it.quantity) || 0,
           unitPrice: Number(it.unitPrice) || 0,
-          total: (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0),
+          total: (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
         })),
         subtotal,
         discountAmount: Number(discountAmount) || 0,
@@ -520,7 +526,6 @@ export function JobworkSalesManager() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Ahmedabad"
                 value={placeOfSupply}
                 onChange={(e) => setPlaceOfSupply(e.target.value)}
                 className="w-full h-[38px] border border-line bg-bg px-2.5 text-xs text-ink focus:border-accent focus:outline-none"
@@ -641,10 +646,9 @@ export function JobworkSalesManager() {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. SS Handle cutting (4MM)"
                         value={item.partName}
                         onChange={(e) => updateLineItem(idx, "partName", e.target.value)}
-                        className="w-full h-9 bg-transparent px-2.5 text-xs text-ink placeholder:text-ink-dimmer focus:bg-bg-alt focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent border-0 rounded-none"
+                        className="w-full h-9 bg-transparent px-2.5 text-xs text-ink focus:bg-bg-alt focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent border-0 rounded-none"
                       />
                     </td>
                     <td className="p-0 border-r border-line">
@@ -660,7 +664,7 @@ export function JobworkSalesManager() {
                     <td className="p-0 border-r border-line">
                       <input
                         type="text"
-                        value={item.hsnSac || "9988"}
+                        value={item.hsnSac || ""}
                         onChange={(e) => updateLineItem(idx, "hsnSac", e.target.value)}
                         className="w-full h-9 bg-transparent px-2.5 font-mono text-xs text-ink focus:bg-bg-alt focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent border-0 rounded-none"
                       />
@@ -672,7 +676,13 @@ export function JobworkSalesManager() {
                         min="0.01"
                         required
                         value={item.quantity || ""}
-                        onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateLineItem(
+                            idx,
+                            "quantity",
+                            e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
+                          )
+                        }
                         className="w-full h-9 bg-transparent px-2.5 text-right font-mono text-xs text-ink focus:bg-bg-alt focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent border-0 rounded-none"
                       />
                     </td>
