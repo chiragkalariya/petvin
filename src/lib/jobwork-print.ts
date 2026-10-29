@@ -199,7 +199,7 @@ export function generateJobworkInvoiceHtml(
 
   const items = parseItems(sale.itemsJson);
   const invoiceDateStr = formatDmy(sale.invoiceDate);
-  const placeOfSupply = sale.placeOfSupply?.trim() || "Ahmedabad";
+  const placeOfSupply = sale.placeOfSupply?.trim() || "—";
 
   // Bill To details
   const billName = sale.customerName || "—";
@@ -229,7 +229,7 @@ export function generateJobworkInvoiceHtml(
 
   if (items.length > 0) {
     items.forEach((it) => {
-      const code = it.hsnSac || "9988";
+      const code = it.hsnSac || "—";
       if (!hsnGroups[code]) {
         hsnGroups[code] = {
           hsn: code,
@@ -824,7 +824,7 @@ export function generateJobworkInvoiceHtml(
               <td>
                 <strong>${item.partName}</strong>
               </td>
-              <td class="text-center">${item.hsnSac || "9988"}</td>
+              <td class="text-center">${item.hsnSac || "—"}</td>
               <td class="text-center font-medium">${item.quantity} ${item.unit || "Nos"}</td>
               <td class="text-right">${formatInr(item.unitPrice)}</td>
               <td class="text-right font-medium">${formatInr(item.total)}</td>
@@ -1068,7 +1068,7 @@ export function printJobworkChallan(sale: JobworkSalePrintData, companySettings?
         <div><strong>Challan No:</strong> ${dcNumber}</div>
         <div><strong>Challan Date:</strong> ${challanDateStr}</div>
         <div><strong>Ref Invoice:</strong> ${sale.invoiceNumber}</div>
-        <div><strong>Place of Supply:</strong> ${sale.placeOfSupply || "Ahmedabad"}</div>
+        <div><strong>Place of Supply:</strong> ${sale.placeOfSupply || "—"}</div>
       </div>
 
       <div class="party-card">
@@ -1102,7 +1102,7 @@ export function printJobworkChallan(sale: JobworkSalePrintData, companySettings?
                 <strong>${item.partName}</strong>
               </td>
               <td>${item.processType || "Job Work"}</td>
-              <td style="text-align: center;">${item.hsnSac || "9988"}</td>
+              <td style="text-align: center;">${item.hsnSac || "—"}</td>
               <td style="text-align: right; font-weight: 700;">${item.quantity} ${item.unit || "Nos"}</td>
             </tr>
           `

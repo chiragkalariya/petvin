@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
 import { siteSettingsSchema } from "@/lib/validations";
+
+export const dynamic = "force-dynamic";
 
 const DEFAULT_SITE_SETTINGS = {
   id: "default",
@@ -48,24 +49,32 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await requireUser();
+
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
     }
 
-    const body = await req.json();
     const parsed = siteSettingsSchema.safeParse(body);
 
     if (!parsed.success) {
+      const errorMsg = parsed.error.issues?.[0]?.message || "Validation failed";
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.format() },
+        { error: errorMsg, details: parsed.error.format() },
         { status: 400 }
       );
     }
 
     const data = parsed.data;
+    const cleanSigUrl = data.signatureImageUrl?.trim() || null;
 
     const settings = await prisma.siteSettings.upsert({
       where: { id: "default" },
@@ -86,7 +95,7 @@ export async function PUT(req: Request) {
         termsAndConditions: data.termsAndConditions?.trim() || null,
         authorisedSignature: data.authorisedSignature?.trim() || "For Petvin Febtech",
         signatureDesignation: data.signatureDesignation?.trim() || "Authorised Signature",
-        signatureImageUrl: data.signatureImageUrl || null,
+        signatureImageUrl: cleanSigUrl,
       },
       create: {
         id: "default",
@@ -106,12 +115,15 @@ export async function PUT(req: Request) {
         termsAndConditions: data.termsAndConditions?.trim() || null,
         authorisedSignature: data.authorisedSignature?.trim() || "For Petvin Febtech",
         signatureDesignation: data.signatureDesignation?.trim() || "Authorised Signature",
-        signatureImageUrl: data.signatureImageUrl || null,
+        signatureImageUrl: cleanSigUrl,
       },
     });
 
     return NextResponse.json({ settings, message: "Site settings updated successfully!" });
   } catch (err: any) {
+    if (err?.message === "UNAUTHORIZED" || err?.message === "FORBIDDEN") {
+      return NextResponse.json({ error: "Unauthorized. Please log in again." }, { status: 401 });
+    }
     console.error("PUT /api/site-settings error:", err);
     return NextResponse.json(
       { error: err.message || "Failed to update site settings" },
