@@ -921,7 +921,7 @@ export function generateJobworkInvoiceHtml(
             <th style="width: 16%;">Branch</th>
             <th style="width: 20%;">A/C No</th>
             <th style="width: 16%;">IFSC Code</th>
-            <th class="th-roundoff" style="width: 14%;">Round Off</th>
+            <th style="width: 14%;">Round Off</th>
             <th class="th-roundoff-val" style="width: 14%;">${roundOffFormatted}</th>
           </tr>
         </thead>

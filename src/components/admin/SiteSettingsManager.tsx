@@ -555,7 +555,7 @@ export function SiteSettingsManager() {
                       <th className="border border-[#dbeafe] p-1">Branch</th>
                       <th className="border border-[#dbeafe] p-1">A/C No</th>
                       <th className="border border-[#dbeafe] p-1">IFSC</th>
-                      <th className="border border-[#dbeafe] p-1 font-normal text-[#334155]">Round Off</th>
+                      <th className="border border-[#dbeafe] p-1">Round Off</th>
                       <th className="border border-[#dbeafe] p-1 text-right font-normal">0.00</th>
                     </tr>
                   </thead>
