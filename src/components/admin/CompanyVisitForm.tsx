@@ -375,7 +375,7 @@ export function CompanyVisitForm({
                 <Select
                   label="Priority"
                   value={inlineCompany.priority}
-                  onChange={(e) => setInlineCompany((prev) => ({ ...prev, priority: e.target.value }))}
+                  onChange={(val) => setInlineCompany((prev) => ({ ...prev, priority: val }))}
                   options={PRIORITY_OPTIONS}
                 />
               </div>
@@ -463,7 +463,7 @@ export function CompanyVisitForm({
             <Select
               label="Status"
               value={values.status}
-              onChange={(e) => update("status", e.target.value)}
+              onChange={(val) => update("status", val)}
               options={STATUS_OPTIONS}
             />
             <Input

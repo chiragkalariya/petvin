@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { Badge, Card, SpecRow } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -665,14 +666,12 @@ function FSelect({ value, onChange, options, className = "" }: {
   options: (string | { value: string; label: string })[]; className?: string;
 }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className={`w-full border border-line bg-bg text-ink px-3 py-2 text-sm focus:border-accent focus:outline-none transition-colors ${className}`}>
-      {options.map((opt) => {
-        const val = typeof opt === "string" ? opt : opt.value;
-        const lbl = typeof opt === "string" ? opt : opt.label;
-        return <option key={val} value={val}>{lbl}</option>;
-      })}
-    </select>
+    <Select
+      value={value}
+      onChange={onChange}
+      options={options}
+      className={className}
+    />
   );
 }
 
@@ -885,37 +884,43 @@ function AddItemForm({
             <div>
               <FLabel>Est. Time</FLabel>
               <div className="flex items-center gap-1">
-                <select
-                  value={Math.floor(draft.cuttingTimeMin / 60)}
-                  onChange={(e) => {
-                    const h = Number(e.target.value);
-                    const m = draft.cuttingTimeMin % 60;
-                    const hh = String(h).padStart(2, "0");
-                    const mm = String(m).padStart(2, "0");
-                    handleCuttingTimeChange(`${hh}:${mm}`);
-                  }}
-                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
-                >
-                  {HOURS_OPTIONS.map((h) => (
-                    <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
-                  ))}
-                </select>
+                <div className="w-1/2">
+                  <Select
+                    size="sm"
+                    value={String(Math.floor(draft.cuttingTimeMin / 60))}
+                    onChange={(val) => {
+                      const h = Number(val);
+                      const m = draft.cuttingTimeMin % 60;
+                      const hh = String(h).padStart(2, "0");
+                      const mm = String(m).padStart(2, "0");
+                      handleCuttingTimeChange(`${hh}:${mm}`);
+                    }}
+                    options={HOURS_OPTIONS.map((h) => ({
+                      value: String(h),
+                      label: String(h).padStart(2, "0"),
+                    }))}
+                    isSearchable={false}
+                  />
+                </div>
                 <span className="text-ink-dimmer font-mono text-sm font-bold">:</span>
-                <select
-                  value={draft.cuttingTimeMin % 60}
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    const h = Math.floor(draft.cuttingTimeMin / 60);
-                    const hh = String(h).padStart(2, "0");
-                    const mm = String(m).padStart(2, "0");
-                    handleCuttingTimeChange(`${hh}:${mm}`);
-                  }}
-                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
-                >
-                  {MINUTES_OPTIONS.map((m) => (
-                    <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
-                  ))}
-                </select>
+                <div className="w-1/2">
+                  <Select
+                    size="sm"
+                    value={String(draft.cuttingTimeMin % 60)}
+                    onChange={(val) => {
+                      const m = Number(val);
+                      const h = Math.floor(draft.cuttingTimeMin / 60);
+                      const hh = String(h).padStart(2, "0");
+                      const mm = String(m).padStart(2, "0");
+                      handleCuttingTimeChange(`${hh}:${mm}`);
+                    }}
+                    options={MINUTES_OPTIONS.map((m) => ({
+                      value: String(m),
+                      label: String(m).padStart(2, "0"),
+                    }))}
+                    isSearchable={false}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -945,37 +950,43 @@ function AddItemForm({
             <div>
               <FLabel>Est. Time</FLabel>
               <div className="flex items-center gap-1">
-                <select
-                  value={Math.floor(draft.bendingTimeMin / 60)}
-                  onChange={(e) => {
-                    const h = Number(e.target.value);
-                    const m = draft.bendingTimeMin % 60;
-                    const hh = String(h).padStart(2, "0");
-                    const mm = String(m).padStart(2, "0");
-                    handleBendingTimeChange(`${hh}:${mm}`);
-                  }}
-                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
-                >
-                  {HOURS_OPTIONS.map((h) => (
-                    <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
-                  ))}
-                </select>
+                <div className="w-1/2">
+                  <Select
+                    size="sm"
+                    value={String(Math.floor(draft.bendingTimeMin / 60))}
+                    onChange={(val) => {
+                      const h = Number(val);
+                      const m = draft.bendingTimeMin % 60;
+                      const hh = String(h).padStart(2, "0");
+                      const mm = String(m).padStart(2, "0");
+                      handleBendingTimeChange(`${hh}:${mm}`);
+                    }}
+                    options={HOURS_OPTIONS.map((h) => ({
+                      value: String(h),
+                      label: String(h).padStart(2, "0"),
+                    }))}
+                    isSearchable={false}
+                  />
+                </div>
                 <span className="text-ink-dimmer font-mono text-sm font-bold">:</span>
-                <select
-                  value={draft.bendingTimeMin % 60}
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    const h = Math.floor(draft.bendingTimeMin / 60);
-                    const hh = String(h).padStart(2, "0");
-                    const mm = String(m).padStart(2, "0");
-                    handleBendingTimeChange(`${hh}:${mm}`);
-                  }}
-                  className="w-full border border-line bg-bg text-ink px-2 py-2 text-sm font-mono focus:border-accent focus:outline-none transition-colors"
-                >
-                  {MINUTES_OPTIONS.map((m) => (
-                    <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
-                  ))}
-                </select>
+                <div className="w-1/2">
+                  <Select
+                    size="sm"
+                    value={String(draft.bendingTimeMin % 60)}
+                    onChange={(val) => {
+                      const m = Number(val);
+                      const h = Math.floor(draft.bendingTimeMin / 60);
+                      const hh = String(h).padStart(2, "0");
+                      const mm = String(m).padStart(2, "0");
+                      handleBendingTimeChange(`${hh}:${mm}`);
+                    }}
+                    options={MINUTES_OPTIONS.map((m) => ({
+                      value: String(m),
+                      label: String(m).padStart(2, "0"),
+                    }))}
+                    isSearchable={false}
+                  />
+                </div>
               </div>
             </div>
           </div>

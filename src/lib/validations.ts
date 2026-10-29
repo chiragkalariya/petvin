@@ -123,3 +123,69 @@ export const machineSchema = z.object({
 });
 export type MachineValues = z.infer<typeof machineSchema>;
 
+export const jobworkLineItemSchema = z.object({
+  id: z.string(),
+  partName: z.string().min(1, "Part / process description is required"),
+  processType: z.string().default("Laser Cutting"),
+  material: z.string().optional().or(z.literal("")),
+  thicknessMm: z.coerce.number().optional().default(0),
+  hsnSac: z.string().default("9988"),
+  quantity: z.coerce.number().min(0.01, "Quantity must be greater than 0"),
+  unit: z.string().default("Pcs"),
+  unitPrice: z.coerce.number().min(0, "Rate must be 0 or higher"),
+  total: z.coerce.number().min(0),
+});
+export type JobworkLineItem = z.infer<typeof jobworkLineItemSchema>;
+
+export const jobworkSaleSchema = z.object({
+  invoiceNumber: z.string().optional().or(z.literal("")),
+  invoiceDate: z.string().min(1, "Invoice date is required"),
+  dueDate: z.string().optional().or(z.literal("")),
+  customerName: z.string().min(2, "Customer name is required"),
+  customerPhone: z.string().optional().or(z.literal("")),
+  customerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  customerGst: z.string().optional().or(z.literal("")),
+  customerAddress: z.string().optional().or(z.literal("")),
+  placeOfSupply: z.string().optional().default("Ahmedabad"),
+  shipToName: z.string().optional().or(z.literal("")),
+  shipToAddress: z.string().optional().or(z.literal("")),
+  shipToPhone: z.string().optional().or(z.literal("")),
+  shipToGst: z.string().optional().or(z.literal("")),
+  challanNumber: z.string().optional().or(z.literal("")),
+  jobDescription: z.string().optional().or(z.literal("")),
+  items: z.array(jobworkLineItemSchema).min(1, "Please add at least one line item"),
+  subtotal: z.coerce.number().min(0),
+  discountAmount: z.coerce.number().min(0).default(0),
+  taxRatePercent: z.coerce.number().min(0).default(18),
+  taxAmount: z.coerce.number().min(0).default(0),
+  totalAmount: z.coerce.number().min(0),
+  paidAmount: z.coerce.number().min(0).default(0),
+  balanceAmount: z.coerce.number().default(0),
+  paymentStatus: z.enum(["PENDING", "PARTIAL", "PAID"]).default("PENDING"),
+  paymentMethod: z.string().optional().or(z.literal("")),
+  jobStatus: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "DELIVERED", "CANCELLED"]).default("PENDING"),
+  notes: z.string().optional().or(z.literal("")),
+  terms: z.string().optional().or(z.literal("")),
+});
+export type JobworkSaleValues = z.infer<typeof jobworkSaleSchema>;
+
+export const siteSettingsSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  tagline: z.string().optional().or(z.literal("")),
+  address: z.string().min(1, "Address is required"),
+  pincode: z.string().min(1, "Pincode is required"),
+  gstNo: z.string().min(1, "GST number is required"),
+  panNo: z.string().optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  email: z.string().email().optional().or(z.literal("")),
+  website: z.string().optional().or(z.literal("")),
+  bankName: z.string().optional().or(z.literal("")),
+  bankBranch: z.string().optional().or(z.literal("")),
+  bankAccountNo: z.string().optional().or(z.literal("")),
+  bankIfsc: z.string().optional().or(z.literal("")),
+  termsAndConditions: z.string().optional().or(z.literal("")),
+  authorisedSignature: z.string().optional().or(z.literal("")),
+  signatureDesignation: z.string().optional().or(z.literal("")),
+  signatureImageUrl: z.string().optional().nullable().or(z.literal("")),
+});
+export type SiteSettingsValues = z.infer<typeof siteSettingsSchema>;

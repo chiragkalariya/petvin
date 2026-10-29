@@ -112,7 +112,7 @@ export function ProspectCompanyForm({
         <Select
           label="Priority"
           value={values.priority}
-          onChange={(e) => update("priority", e.target.value)}
+          onChange={(val) => update("priority", val)}
           options={PRIORITY_OPTIONS}
           className="min-w-[130px]"
         />

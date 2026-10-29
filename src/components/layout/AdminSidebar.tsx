@@ -8,6 +8,8 @@ import { cn, getInitials } from "@/lib/utils";
 const LINKS = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/inquiries", label: "Inquiries" },
+  { href: "/admin/jobwork-sales", label: "Jobwork Sales" },
+  { href: "/admin/parties", label: "Parties & Clients" },
   { href: "/admin/companies", label: "Prospect Companies" },
   { href: "/admin/visits", label: "Visit History" },
   { href: "/admin/costing", label: "Costing Calculator" },
@@ -16,6 +18,7 @@ const LINKS = [
   { href: "/admin/portfolio", label: "Our Work", exact: true },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/users", label: "Employees", adminOnly: true },
+  { href: "/admin/settings", label: "Site Settings", adminOnly: true },
 ];
 
 export function AdminSidebar() {

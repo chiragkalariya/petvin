@@ -55,6 +55,7 @@ model User {
   costingRecords    CostingRecord[]
   notes             Note[]
   prospects         ProspectCompany[] @relation("ProspectCreator")
+  jobworkSales      JobworkSale[]     @relation("JobworkCreator")
 
   @@map("users")
 }
@@ -268,5 +269,127 @@ model Machine {
   @@map("machines")
 }
 
+model Party {
+  id            String   @id @default(cuid())
+  name          String?  // Contact Person Name
+  companyName   String   // Company / Billed Name
+  phone         String?
+  email         String?
+  address       String?  @db.Text
+  city          String?
+  state         String?  @default("Gujarat")
+  stateCode     String?  @default("24")
+  pincode       String?
+  gstin         String?
+  pan           String?
+  notes         String?  @db.Text
 
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
+  @@index([companyName])
+  @@index([phone])
+  @@map("parties")
+}
+
+enum JobworkPaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum JobworkStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+model JobworkSale {
+  id              String               @id @default(cuid())
+  invoiceNumber   String               @unique
+  invoiceDate     DateTime             @default(now())
+  dueDate         DateTime?
+
+  // Customer Details (Bill To)
+  customerName    String
+  customerPhone   String?
+  customerEmail   String?
+  customerGst     String?
+  customerAddress String?
+  placeOfSupply   String?              @default("Ahmedabad")
+
+  // Ship To Details (optional, defaults to Bill To if empty)
+  shipToName      String?
+  shipToAddress   String?
+  shipToPhone     String?
+  shipToGst       String?
+
+  // Job Details
+  challanNumber   String?
+  jobDescription  String?
+
+  // Line items stored as JSON array:
+  // [{ id, partName, processType, material, thicknessMm, hsnSac, quantity, unit, unitPrice, total }]
+  itemsJson       String               @db.Text
+
+  // Financial calculations
+  subtotal        Float                @default(0)
+  discountAmount  Float                @default(0)
+  taxRatePercent  Float                @default(18)
+  taxAmount       Float                @default(0)
+  totalAmount     Float                @default(0)
+  paidAmount      Float                @default(0)
+  balanceAmount   Float                @default(0)
+
+  paymentStatus   JobworkPaymentStatus @default(PENDING)
+  paymentMethod   String?              // Cash, UPI, Bank Transfer, Cheque
+  jobStatus       JobworkStatus        @default(PENDING)
+
+  notes           String?
+  terms           String?
+
+  createdBy       User?                @relation("JobworkCreator", fields: [createdById], references: [id])
+  createdById     String?
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([invoiceNumber])
+  @@index([customerName])
+  @@index([paymentStatus])
+  @@index([jobStatus])
+  @@index([createdAt])
+  @@map("jobwork_sales")
+}
+
+model SiteSettings {
+  id                  String   @id @default("default")
+  companyName         String   @default("Petvin Febtech")
+  tagline             String?  @default("Laser Cutting & CNC Bending")
+  address             String   @default("239, Vivekanand industrial park, Kubadthal Road, opp. Arya industrial estate, Kubadthal, Ahmedabad, Gujarat")
+  pincode             String   @default("382433")
+  gstNo               String   @default("24EKIPR1824M1ZS")
+  panNo               String?  @default("EKIPR1824M")
+  phone               String   @default("+91 7600652814 / +91 9624889080")
+  email               String   @default("petvinfebtech@gmail.com")
+  website             String   @default("www.petvinfebtech.com")
+  
+  // Bank details
+  bankName            String?  @default("")
+  bankBranch          String?  @default("")
+  bankAccountNo       String?  @default("")
+  bankIfsc            String?  @default("")
+
+  // Commercial / Print Defaults
+  termsAndConditions  String?  @db.Text
+  authorisedSignature String   @default("For Petvin Febtech")
+  signatureDesignation String  @default("Authorised Signature")
+  signatureImageUrl   String?  @db.Text
+
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+
+  @@map("site_settings")
+}
