@@ -91,24 +91,4 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 Textarea.displayName = "Textarea";
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: string;
-  hint?: string;
-  options: { value: string; label: string }[];
-}
-
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, hint, id, options, className, ...props }, ref) => (
-    <FieldWrapper label={label} htmlFor={id} error={error} hint={hint}>
-      <select ref={ref} id={id} className={cn(fieldBase, error && "border-accent", className)} {...props}>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </FieldWrapper>
-  )
-);
-Select.displayName = "Select";
+export { Select, type CustomSelectProps as SelectProps } from "@/components/ui/Select";

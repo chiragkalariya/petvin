@@ -210,13 +210,13 @@ export function InquiryDetailView({ inquiryId }: { inquiryId: string }) {
           <Select
             label="Status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(val) => setStatus(val)}
             options={STATUS_OPTIONS}
           />
           <Select
             label="Assigned To"
             value={assignedToId}
-            onChange={(e) => setAssignedToId(e.target.value)}
+            onChange={(val) => setAssignedToId(val)}
             options={[{ value: "", label: "Unassigned" }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
           />
           <Button onClick={handleUpdate} isLoading={saving}>

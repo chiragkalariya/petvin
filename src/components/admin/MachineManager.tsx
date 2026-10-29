@@ -204,7 +204,7 @@ export function MachineManager() {
           <Select
             label="Machine Type *"
             value={machineType}
-            onChange={(e) => setMachineType(e.target.value as "CUTTING" | "BENDING")}
+            onChange={(val) => setMachineType(val as "CUTTING" | "BENDING")}
             options={[
               { value: "CUTTING", label: "Laser Cutting" },
               { value: "BENDING", label: "Bending" },

@@ -494,29 +494,31 @@ export function PortfolioManager() {
           {/* Quick Filters */}
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto md:ml-auto">
             {/* Category Filter */}
-            <select
-              value={selectedCategoryFilter}
-              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="rounded-lg border border-line bg-bg-alt px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
-            >
-              <option value="all">All Categories ({categories.length})</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.slug}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <Select
+                size="sm"
+                value={selectedCategoryFilter}
+                onChange={(val) => setSelectedCategoryFilter(val || "all")}
+                options={[
+                  { value: "all", label: `All Categories (${categories.length})` },
+                  ...categories.map((cat) => ({ value: cat.slug, label: cat.name })),
+                ]}
+              />
+            </div>
 
             {/* Status Filter */}
-            <select
-              value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
-              className="rounded-lg border border-line bg-bg-alt px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
-            >
-              <option value="all">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
+            <div className="w-36">
+              <Select
+                size="sm"
+                value={selectedStatusFilter}
+                onChange={(val) => setSelectedStatusFilter(val || "all")}
+                options={[
+                  { value: "all", label: "All Status" },
+                  { value: "ACTIVE", label: "Active" },
+                  { value: "INACTIVE", label: "Inactive" },
+                ]}
+              />
+            </div>
           </div>
         </div>
 
@@ -732,36 +734,19 @@ export function PortfolioManager() {
                 <Select
                   label="Category *"
                   value={itemCategoryId}
-                  onChange={(e) => setItemCategoryId(e.target.value)}
+                  onChange={(val) => setItemCategoryId(val)}
                   options={categories.map((c) => ({ value: c.id, label: c.name }))}
                 />
               </div>
 
               {/* Row 2: Material */}
               <div>
-                <label className="font-mono text-[11px] uppercase tracking-wider text-ink-dimmer block mb-2">
-                  Material *
-                </label>
-                <div className="space-y-2">
-                  <select
-                    value={itemMaterial}
-                    onChange={(e) => setItemMaterial(e.target.value)}
-                    className="w-full bg-bg-alt border border-line text-ink px-3.5 py-2.5 text-sm transition-all focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-                  >
-                    {PRESET_MATERIALS.map((mat) => (
-                      <option key={mat} value={mat}>
-                        {mat}
-                      </option>
-                    ))}
-                  </select>
-                  {/* <input
-                    type="text"
-                    value={itemMaterial}
-                    onChange={(e) => setItemMaterial(e.target.value)}
-                    placeholder="Or specify exact grades (e.g. MS 3mm, SS 304, AL 5052)"
-                    className="w-full bg-bg-alt border border-line text-ink px-3.5 py-1.5 text-xs focus:border-accent focus:outline-none placeholder:text-ink-dimmer"
-                  /> */}
-                </div>
+                <Select
+                  label="Material *"
+                  value={itemMaterial}
+                  onChange={(val) => setItemMaterial(val)}
+                  options={PRESET_MATERIALS}
+                />
               </div>
 
               {/* Row 3: Description & Photo Upload with Preview */}

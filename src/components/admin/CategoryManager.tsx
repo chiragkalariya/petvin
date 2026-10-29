@@ -313,8 +313,8 @@ export function CategoryManager() {
           <Select
             label="Status"
             value={categoryStatus}
-            onChange={(e) =>
-              setCategoryStatus(e.target.value as "ACTIVE" | "INACTIVE")
+            onChange={(val) =>
+              setCategoryStatus(val as "ACTIVE" | "INACTIVE")
             }
             options={[
               { value: "ACTIVE", label: "Active (Visible on Website)" },
